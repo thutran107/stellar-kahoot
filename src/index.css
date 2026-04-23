@@ -1,0 +1,49 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, monospace;
+  
+  --color-neon-pink: #f472b6;
+  --color-neon-blue: #22d3ee;
+  --color-neon-purple: #4f46e5;
+  --color-neon-green: #34d399;
+  --color-space-dark: #020617;
+  --color-space-light: #1e1b4b;
+}
+
+body {
+  background-color: var(--color-space-dark);
+  color: #f8fafc;
+  background-image: radial-gradient(circle at 50% 50%, #1e1b4b 0%, #020617 100%);
+  background-attachment: fixed;
+  font-family: 'Helvetica Neue', Arial, sans-serif;
+}
+
+.glass {
+  background: rgba(30, 41, 59, 0.7);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.orbit {
+  border: 1px dashed rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+  position: absolute;
+  pointer-events: none;
+}
+
+/* Funky button glow updated to sophisticated gradient */
+.btn-funky {
+  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+  background: linear-gradient(to right, #4f46e5, #db2777);
+  box-shadow: 0 0 15px rgba(236, 72, 153, 0.2);
+  border: none;
+}
+.btn-funky:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 0 25px rgba(236, 72, 153, 0.4);
+}
+.btn-funky:active {
+  transform: scale(0.98);
+}

@@ -1,0 +1,6 @@
+{
+  "name": "StellarTrivia",
+  "description": "A funky interstellar trivia game where you scan a QR to join and compete in real-time.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}
