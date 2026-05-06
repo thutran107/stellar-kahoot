@@ -15,10 +15,12 @@ export interface Player {
 }
 
 export interface Question {
+  id?: string;
   text: string;
   options: string[];
   correctIndex: number;
   timeLimit: number;
+  pointMultiplier?: number;
 }
 
 interface GameStore {
@@ -36,9 +38,10 @@ interface GameStore {
   isHost: boolean;
   answerFeedback: boolean | null;
   error: string | null;
+  answerCounts: number[];
 
   // Actions
-  hostGame: (questions: Question[]) => void;
+  hostGame: (questions: Question[], quizId?: string) => void;
   joinGame: (pin: string, name: string, avatar: string) => void;
   startGame: () => void;
   submitAnswer: (index: number) => void;
@@ -59,6 +62,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   isHost: false,
   answerFeedback: null,
   error: null,
+  answerCounts: [],
 
   connect: () => {
     if (get().socket) return;
@@ -80,7 +84,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         question: data.question,
         totalQuestions: data.totalQuestions,
         questionStartTime: data.questionStartTime,
-        // reset answer feedback if a new question starts
+        answerCounts: data.answerCounts ?? [],
         ...(data.gameState === 'QUESTION_ACTIVE' && get().gameState !== 'QUESTION_ACTIVE' ? { answerFeedback: null } : {})
       });
     });
@@ -108,8 +112,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set({ socket });
   },
 
-  hostGame: (questions: Question[]) => {
-    get().socket?.emit('host-game', { customQuestions: questions });
+  hostGame: (questions: Question[], quizId?: string) => {
+    get().socket?.emit('host-game', { customQuestions: questions, quizId });
   },
 
   joinGame: (pin: string, name: string, avatar: string) => {

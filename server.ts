@@ -5,6 +5,7 @@ import http from "http";
 import path from "path";
 import { fileURLToPath } from "url";
 import { quizRouter } from "./server/routes/quiz.js";
+import { gamesRouter } from "./server/routes/games.js";
 import { supabaseAdmin } from "./server/lib/supabase.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -35,6 +36,7 @@ async function startServer() {
   let dbSessionId: string | null = null;
   let dbParticipantIds: Record<string, string> = {}; // socketId → participants.id
   let questionTimer: ReturnType<typeof setTimeout> | null = null;
+  let answerCounts: number[] = [];
 
   const COSMIC_COLORS = [
     '#f472b6', // pink
@@ -82,7 +84,8 @@ async function startServer() {
       currentQuestionIndex,
       question: questions[currentQuestionIndex],
       totalQuestions: questions.length,
-      questionStartTime
+      questionStartTime,
+      answerCounts,
     });
   }
 
@@ -130,6 +133,8 @@ async function startServer() {
         players[pId].lastPointsEarned = 0;
       });
 
+      answerCounts = new Array(questions[currentQuestionIndex].options.length).fill(0);
+
       broadcastState();
 
       if (questionTimer) { clearTimeout(questionTimer); questionTimer = null; }
@@ -164,6 +169,8 @@ async function startServer() {
           players[pId].lastAnswerTime = 0;
           players[pId].lastPointsEarned = 0;
         });
+
+        answerCounts = new Array(questions[currentQuestionIndex].options.length).fill(0);
 
         broadcastState();
 
@@ -270,6 +277,9 @@ async function startServer() {
       }
       
       player.hasAnswered = true;
+      if (answerIndex >= 0 && answerIndex < answerCounts.length) {
+        answerCounts[answerIndex]++;
+      }
       player.lastAnswerTime = timeTaken;
       
       socket.emit("answer-feedback", { isCorrect });
