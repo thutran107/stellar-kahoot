@@ -330,6 +330,7 @@ async function startServer() {
   // API routes FIRST
   app.use(express.json());
   app.use('/api/quizzes', quizRouter);
+  app.use('/api/games', gamesRouter);
 
   app.get("/api/health", (_req, res) => {
     res.json({ status: "ok" });
