@@ -27,10 +27,11 @@ gamesRouter.get('/', async (req: AuthRequest, res) => {
   if (!sessions?.length) { res.json([]); return; }
 
   const sessionIds = sessions.map((s) => s.id);
-  const { data: pRows } = await supabaseAdmin
+  const { data: pRows, error: pErr } = await supabaseAdmin
     .from('participants')
     .select('session_id')
     .in('session_id', sessionIds);
+  if (pErr) { res.status(500).json({ error: pErr.message }); return; }
 
   const countMap = new Map<string, number>();
   for (const p of pRows ?? []) {
@@ -68,17 +69,19 @@ gamesRouter.get('/:id', async (req: AuthRequest, res) => {
 
   if (qErr || !quiz) { res.status(404).json({ error: 'Not found' }); return; }
 
-  const { data: participants } = await supabaseAdmin
+  const { data: participants, error: participantsErr } = await supabaseAdmin
     .from('participants')
     .select('id, display_name, avatar_color, avatar_emoji, total_score')
     .eq('session_id', req.params.id)
     .order('total_score', { ascending: false });
+  if (participantsErr) { res.status(500).json({ error: participantsErr.message }); return; }
 
-  const { data: questions } = await supabaseAdmin
+  const { data: questions, error: questionsErr } = await supabaseAdmin
     .from('questions')
     .select('id, text, options, correct_index, order_index')
     .eq('quiz_id', session.quiz_id)
     .order('order_index');
+  if (questionsErr) { res.status(500).json({ error: questionsErr.message }); return; }
 
   const participantIds = (participants ?? []).map((p) => p.id);
   let answers: { question_id: string; selected_index: number }[] = [];
