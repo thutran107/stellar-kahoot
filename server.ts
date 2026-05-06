@@ -132,8 +132,8 @@ async function startServer() {
 
       broadcastState();
 
-      if (questionTimer) clearTimeout(questionTimer);
-      questionTimer = setTimeout(triggerShowResults, questions[currentQuestionIndex].timeLimit);
+      if (questionTimer) { clearTimeout(questionTimer); questionTimer = null; }
+      questionTimer = setTimeout(triggerShowResults, questions[currentQuestionIndex].timeLimit ?? 20_000);
 
       if (dbSessionId) {
         (async () => {
@@ -167,8 +167,8 @@ async function startServer() {
 
         broadcastState();
 
-        if (questionTimer) clearTimeout(questionTimer);
-        questionTimer = setTimeout(triggerShowResults, questions[currentQuestionIndex].timeLimit);
+        if (questionTimer) { clearTimeout(questionTimer); questionTimer = null; }
+        questionTimer = setTimeout(triggerShowResults, questions[currentQuestionIndex].timeLimit ?? 20_000);
 
         if (dbSessionId) {
           (async () => {
