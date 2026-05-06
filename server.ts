@@ -4,6 +4,8 @@ import { Server } from "socket.io";
 import http from "http";
 import path from "path";
 import { fileURLToPath } from "url";
+import { quizRouter } from "./server/routes/quiz.js";
+import { supabaseAdmin } from "./server/lib/supabase.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -29,6 +31,11 @@ async function startServer() {
   let questions: any[] = [];
   let questionStartTime = 0;
 
+  // DB logging state
+  let dbSessionId: string | null = null;
+  let dbParticipantIds: Record<string, string> = {}; // socketId → participants.id
+  let questionTimer: ReturnType<typeof setTimeout> | null = null;
+
   const COSMIC_COLORS = [
     '#f472b6', // pink
     '#22d3ee', // cyan
@@ -44,6 +51,26 @@ async function startServer() {
 
   function generatePin() {
     return Math.floor(1000 + Math.random() * 9000).toString();
+  }
+
+  function triggerShowResults() {
+    if (gameState !== 'QUESTION_ACTIVE') return;
+    if (questionTimer) { clearTimeout(questionTimer); questionTimer = null; }
+
+    Object.keys(players).forEach(pId => {
+      if (!players[pId].hasAnswered) players[pId].lastPointsEarned = 0;
+    });
+
+    gameState = 'QUESTION_RESULTS';
+    broadcastState();
+
+    if (dbSessionId) {
+      (async () => {
+        const { error } = await supabaseAdmin.from('game_sessions')
+          .update({ state: 'question_reveal' }).eq('id', dbSessionId!);
+        if (error) console.error('show-results update:', error);
+      })();
+    }
   }
 
   function broadcastState() {
@@ -63,7 +90,7 @@ async function startServer() {
     console.log("Client connected", socket.id);
 
     // Host actions
-    socket.on("host-game", ({ customQuestions }) => {
+    socket.on("host-game", ({ customQuestions, quizId }) => {
       gameHostSocketId = socket.id;
       gamePin = generatePin();
       gameState = "LOBBY";
@@ -71,59 +98,113 @@ async function startServer() {
       currentQuestionIndex = 0;
       questions = customQuestions || [];
       questionStartTime = 0;
+      dbSessionId = null;
+      dbParticipantIds = {};
       broadcastState();
       socket.emit("host-joined", { gamePin });
+
+      if (quizId) {
+        (async () => {
+          const { data, error } = await supabaseAdmin.from("game_sessions").insert({
+            quiz_id: quizId,
+            pin: gamePin,
+            state: "lobby",
+            current_question_index: 0,
+          }).select("id").single();
+          if (error) { console.error("game_sessions insert:", error); return; }
+          if (data) dbSessionId = data.id;
+        })();
+      }
     });
 
     socket.on("start-game", () => {
       if (socket.id !== gameHostSocketId) return;
       if (questions.length === 0) return;
-      
+
       gameState = "QUESTION_ACTIVE";
       questionStartTime = Date.now();
-      
-      // Reset answered status
+
       Object.keys(players).forEach(pId => {
         players[pId].hasAnswered = false;
         players[pId].lastAnswerTime = 0;
         players[pId].lastPointsEarned = 0;
       });
-      
+
       broadcastState();
+
+      if (questionTimer) clearTimeout(questionTimer);
+      questionTimer = setTimeout(triggerShowResults, questions[currentQuestionIndex].timeLimit);
+
+      if (dbSessionId) {
+        (async () => {
+          const { error } = await supabaseAdmin.from("game_sessions").update({
+            state: "question_active",
+            started_at: new Date().toISOString(),
+          }).eq("id", dbSessionId!);
+          if (error) console.error("start-game update:", error);
+        })();
+      }
     });
 
     socket.on("show-results", () => {
       if (socket.id !== gameHostSocketId) return;
-      
-      // Anyone who didn't answer gets 0 points shown
-      Object.keys(players).forEach(pId => {
-        if (!players[pId].hasAnswered) {
-          players[pId].lastPointsEarned = 0;
-        }
-      });
-      
-      gameState = "QUESTION_RESULTS";
-      broadcastState();
+      triggerShowResults();
     });
 
     socket.on("next-question", () => {
       if (socket.id !== gameHostSocketId) return;
-      
+
       if (currentQuestionIndex < questions.length - 1) {
         currentQuestionIndex++;
         gameState = "QUESTION_ACTIVE";
         questionStartTime = Date.now();
-        
+
         Object.keys(players).forEach(pId => {
           players[pId].hasAnswered = false;
           players[pId].lastAnswerTime = 0;
           players[pId].lastPointsEarned = 0;
         });
-        
+
         broadcastState();
+
+        if (questionTimer) clearTimeout(questionTimer);
+        questionTimer = setTimeout(triggerShowResults, questions[currentQuestionIndex].timeLimit);
+
+        if (dbSessionId) {
+          (async () => {
+            const { error } = await supabaseAdmin.from("game_sessions").update({
+              state: "question_active",
+              current_question_index: currentQuestionIndex,
+            }).eq("id", dbSessionId!);
+            if (error) console.error("next-question update:", error);
+          })();
+        }
       } else {
+        if (questionTimer) { clearTimeout(questionTimer); questionTimer = null; }
         gameState = "FINAL_LEADERBOARD";
         broadcastState();
+
+        if (dbSessionId) {
+          (async () => {
+            const { error } = await supabaseAdmin.from("game_sessions").update({
+              state: "ended",
+              ended_at: new Date().toISOString(),
+            }).eq("id", dbSessionId!);
+            if (error) console.error("game-end session update:", error);
+
+            await Promise.all(
+              Object.entries(dbParticipantIds).map(async ([socketId, participantId]) => {
+                const player = players[socketId];
+                if (!player) return;
+                const { error: pErr } = await supabaseAdmin.from("participants").update({
+                  total_score: player.score,
+                  avg_response_ms: player.lastAnswerTime || null,
+                }).eq("id", participantId);
+                if (pErr) console.error("participant score update:", pErr);
+              })
+            );
+          })();
+        }
       }
     });
 
@@ -148,9 +229,22 @@ async function startServer() {
         avatar: finalAvatar,
         lastPointsEarned: 0
       };
-      
+
       socket.emit("join-success", { gamePin, name });
       broadcastState();
+
+      if (dbSessionId) {
+        (async () => {
+          const { data, error } = await supabaseAdmin.from("participants").insert({
+            session_id: dbSessionId!,
+            display_name: name,
+            avatar_color: randomColor,
+            avatar_emoji: finalAvatar,
+          }).select("id").single();
+          if (error) { console.error("participants insert:", error); return; }
+          if (data) dbParticipantIds[socket.id] = data.id;
+        })();
+      }
     });
 
     socket.on("submit-answer", ({ answerIndex }) => {
@@ -166,9 +260,9 @@ async function startServer() {
       const maxTime = currentQuestion.timeLimit || 10000; // 10 seconds default
       
       if (isCorrect) {
-        // Fast answer gives more points. Score range: 500 to 1000
-        const timeRatio = Math.max(0, maxTime - timeTaken) / maxTime;
-        const points = Math.round(500 + (500 * timeRatio));
+        const speedFactor = 0.5 + 0.5 * Math.max(0, maxTime - timeTaken) / maxTime;
+        const multiplier = currentQuestion.pointMultiplier || 1;
+        const points = Math.round(1000 * multiplier * speedFactor);
         player.score += points;
         player.lastPointsEarned = points;
       } else {
@@ -179,18 +273,43 @@ async function startServer() {
       player.lastAnswerTime = timeTaken;
       
       socket.emit("answer-feedback", { isCorrect });
-      
-      // Update host with player answered status
       broadcastState();
+
+      const participantId = dbParticipantIds[socket.id];
+      const questionId = currentQuestion.id;
+      if (dbSessionId && participantId && questionId) {
+        (async () => {
+          const { error } = await supabaseAdmin.from("answers").insert({
+            participant_id: participantId,
+            question_id: questionId,
+            selected_index: answerIndex,
+            is_correct: isCorrect,
+            points_earned: player.lastPointsEarned,
+            response_ms: timeTaken,
+          });
+          if (error) console.error("answers insert:", error);
+        })();
+      }
     });
 
     socket.on("disconnect", () => {
       if (socket.id === gameHostSocketId) {
-        // Host left, end game
         io.emit("game-ended", "Host disconnected.");
+        if (questionTimer) { clearTimeout(questionTimer); questionTimer = null; }
+        if (dbSessionId) {
+          (async () => {
+            const { error } = await supabaseAdmin.from("game_sessions").update({
+              state: "ended",
+              ended_at: new Date().toISOString(),
+            }).eq("id", dbSessionId!);
+            if (error) console.error("host-disconnect session update:", error);
+          })();
+        }
         gameHostSocketId = null;
         gamePin = null;
         players = {};
+        dbSessionId = null;
+        dbParticipantIds = {};
       } else if (players[socket.id]) {
         delete players[socket.id];
         broadcastState();
@@ -199,7 +318,10 @@ async function startServer() {
   });
 
   // API routes FIRST
-  app.get("/api/health", (req, res) => {
+  app.use(express.json());
+  app.use('/api/quizzes', quizRouter);
+
+  app.get("/api/health", (_req, res) => {
     res.json({ status: "ok" });
   });
 
@@ -213,7 +335,7 @@ async function startServer() {
   } else {
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
-    app.get('*', (req, res) => {
+    app.get('*', (_req, res) => {
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }
