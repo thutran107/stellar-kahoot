@@ -103,6 +103,7 @@ async function startServer() {
       questionStartTime = 0;
       dbSessionId = null;
       dbParticipantIds = {};
+      answerCounts = [];
       broadcastState();
       socket.emit("host-joined", { gamePin });
 
