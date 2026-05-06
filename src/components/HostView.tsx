@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Users, Play, SkipForward, Trophy, Rocket, AlertTriangle } from 'lucide-react';
+import { Users, Play, SkipForward, Trophy } from 'lucide-react';
 import { useGameStore, Question } from '../store';
+import { apiFetch } from '../lib/api';
 
 function TimerBar({ startTime, timeLimit }: { startTime: number, timeLimit: number }) {
   const [progress, setProgress] = useState(100);
@@ -41,71 +43,58 @@ function TimerBar({ startTime, timeLimit }: { startTime: number, timeLimit: numb
   );
 }
 
-const DEFAULT_QUESTIONS: Question[] = [
-  {
-    text: "Which planet is known as the Red Planet?",
-    options: ["Venus", "Mars", "Jupiter", "Saturn"],
-    correctIndex: 1,
-    timeLimit: 15000
-  },
-  {
-    text: "What is the largest galaxy in the Local Group?",
-    options: ["Andromeda", "Milky Way", "Triangulum", "Messier 81"],
-    correctIndex: 0,
-    timeLimit: 15000
-  },
-  {
-    text: "Who was the first person to walk on the moon?",
-    options: ["Yuri Gagarin", "Buzz Aldrin", "Neil Armstrong", "Michael Collins"],
-    correctIndex: 2,
-    timeLimit: 15000
-  }
-];
-
 export function HostView() {
-  const { 
-    gamePin, gameState, players, question, currentQuestionIndex, 
-    totalQuestions, hostGame, startGame, showResults, nextQuestion, questionStartTime
+  const [searchParams] = useSearchParams();
+  const quizId = searchParams.get('quizId');
+  const [loadingQuiz, setLoadingQuiz] = useState(!!quizId);
+  const [pendingQuestions, setPendingQuestions] = useState<Question[] | null>(null);
+
+  const {
+    socket, gamePin, gameState, players, question, currentQuestionIndex,
+    totalQuestions, hostGame, startGame, showResults, nextQuestion,
+    questionStartTime, connect, answerCounts,
   } = useGameStore();
 
-  const [questions, setQuestions] = useState<Question[]>(DEFAULT_QUESTIONS);
-  const [isEditing, setIsEditing] = useState(true); // Always start in editing mode
+  useEffect(() => { connect(); }, [connect]);
 
-  const handleHost = () => {
-    hostGame(questions);
-    setIsEditing(false);
-  };
+  useEffect(() => {
+    if (!quizId) return;
+    apiFetch(`/api/quizzes/${quizId}`)
+      .then((r) => r.json())
+      .then((data) => {
+        const qs: Question[] = (data.questions ?? []).map((q: any) => ({
+          id: q.id,
+          text: q.text,
+          options: q.options,
+          correctIndex: q.correct_index,
+          timeLimit: q.time_limit_sec * 1000,
+          pointMultiplier: q.point_multiplier,
+        }));
+        setPendingQuestions(qs);
+        setLoadingQuiz(false);
+      });
+  }, [quizId]);
 
-  if (!gamePin && isEditing) {
+  useEffect(() => {
+    if (!pendingQuestions || !socket || gamePin) return;
+    hostGame(pendingQuestions, quizId ?? undefined);
+  }, [pendingQuestions, socket, gamePin, hostGame]);
+
+  if (loadingQuiz) {
     return (
-      <div className="min-h-screen p-8 max-w-4xl mx-auto">
-        <h2 className="text-4xl font-bold mb-8 text-neon-blue font-mono">Mission Control</h2>
-        <div className="space-y-6 mb-8">
-          {questions.map((q, i) => (
-            <div key={i} className="p-6 glass rounded-xl">
-              <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
-                <span className="bg-neon-purple text-white px-3 py-1 rounded text-sm">Q{i + 1}</span> 
-                {q.text}
-              </h3>
-              <div className="grid grid-cols-2 gap-4">
-                {q.options.map((opt, optIndex) => (
-                  <div 
-                    key={optIndex} 
-                    className={`p-3 rounded border ${optIndex === q.correctIndex ? 'border-neon-green bg-neon-green/10 text-neon-green' : 'border-gray-600/50 text-gray-400'}`}
-                  >
-                    {opt}
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
+      <div className="min-h-screen flex items-center justify-center text-gray-400 font-mono">
+        Loading quiz...
+      </div>
+    );
+  }
+
+  if (!quizId) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-center p-8">
+        <div>
+          <p className="text-xl text-gray-400 mb-4">No quiz selected.</p>
+          <a href="/quizzes" className="text-neon-blue underline">Go to Mission Control</a>
         </div>
-        <button 
-          onClick={handleHost}
-          className="w-full py-4 text-white rounded-xl text-xl font-bold btn-funky flex items-center justify-center gap-2"
-        >
-          <Rocket className="w-6 h-6" /> Initialize Launch Sequence
-        </button>
       </div>
     );
   }
@@ -224,7 +213,7 @@ export function HostView() {
               onClick={showResults}
               className="py-4 px-8 text-white font-black rounded-[2rem] text-lg flex items-center gap-2 uppercase tracking-tighter btn-funky"
             >
-              <SkipForward className="w-5 h-5" /> End Question & Show Results
+              <SkipForward className="w-5 h-5" /> End Early
             </button>
           </div>
         </div>
@@ -239,11 +228,40 @@ export function HostView() {
              <div className="grid grid-cols-1 gap-4 max-w-3xl mx-auto">
                {question.options.map((opt, i) => {
                  const isCorrect = i === question.correctIndex;
+                 const count = answerCounts[i] ?? 0;
+                 const total = answerCounts.reduce((a, b) => a + b, 0);
+                 const pct = total > 0 ? Math.round((count / total) * 100) : 0;
 
                  return (
-                  <div key={i} className={`p-6 rounded-2xl flex items-center justify-between text-xl font-bold ${isCorrect ? 'bg-neon-green/20 border-2 border-neon-green text-neon-green shadow-[0_0_15px_rgba(52,211,153,0.3)]' : 'bg-red-500/20 border border-red-500/50 text-red-500 opacity-60 mix-blend-screen'}`}>
-                    <span>{opt}</span>
-                    {isCorrect && <span className="bg-neon-green text-black px-3 py-1 rounded text-sm ml-4 shadow-[0_0_15px_rgba(52,211,153,0.6)]">CORRECT ORBIT</span>}
+                  <div
+                    key={i}
+                    className={`p-6 rounded-2xl flex flex-col gap-3 text-xl font-bold ${
+                      isCorrect
+                        ? 'bg-neon-green/20 border-2 border-neon-green text-neon-green shadow-[0_0_15px_rgba(52,211,153,0.3)]'
+                        : 'bg-red-500/20 border border-red-500/50 text-red-500 opacity-60 mix-blend-screen'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span>{opt}</span>
+                      <div className="flex items-center gap-3">
+                        {isCorrect && (
+                          <span className="bg-neon-green text-black px-3 py-1 rounded text-sm shadow-[0_0_15px_rgba(52,211,153,0.6)]">
+                            CORRECT ORBIT
+                          </span>
+                        )}
+                        <span className="font-mono text-lg">
+                          {count}{total > 0 ? ` (${pct}%)` : ''}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="w-full bg-white/10 rounded-full h-2">
+                      <div
+                        className={`h-2 rounded-full transition-all duration-500 ${
+                          isCorrect ? 'bg-neon-green/80' : 'bg-red-500/60'
+                        }`}
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
                   </div>
                  );
                })}
