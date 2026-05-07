@@ -58,6 +58,49 @@ A real-time multiplayer quiz game with a space theme — host a game, share a PI
 | `npm run start` | Production server |
 | `npm run lint` | TypeScript type check |
 
+## Deploy with Dokploy
+
+A `Dockerfile` is included for production deployment.
+
+### 1. Create the app in Dokploy
+
+- Build type: `Dockerfile`
+- Port: `3001`
+- Replicas: `1` (game state is in-memory — do not scale horizontally)
+- Enable **WebSocket support** in the domain proxy settings
+
+### 2. Set build arguments
+
+These are baked into the frontend bundle by Vite at build time:
+
+| Build Arg | Value |
+|---|---|
+| `VITE_SUPABASE_URL` | Your Supabase project URL |
+| `VITE_SUPABASE_ANON_KEY` | Supabase anon (public) key |
+
+### 3. Set environment variables
+
+| Variable | Value |
+|---|---|
+| `SUPABASE_URL` | Your Supabase project URL |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key |
+| `PORT` | `3001` |
+| `CORS_ORIGIN` | Your production domain (e.g. `https://yourdomain.com`) |
+
+### 4. Configure Supabase for production
+
+In your Supabase project → **Authentication → URL Configuration**:
+- Set **Site URL** to your production domain
+- Add your production domain to **Redirect URLs**
+
+Magic-link login will not work until this is done.
+
+### 5. Run the RLS migration
+
+In Supabase → **SQL Editor**, run the contents of `db/migrations/001_rls_game_tables.sql` if you haven't already.
+
+---
+
 ## How to Play
 
 1. Sign in and create a quiz at `/quizzes`
