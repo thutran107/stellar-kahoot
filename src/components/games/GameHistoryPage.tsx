@@ -21,8 +21,12 @@ export function GameHistoryPage() {
 
   useEffect(() => {
     apiFetch('/api/games')
-      .then((r) => r.json())
-      .then((data) => { setSessions(data); setLoading(false); });
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
+      .then((data) => { setSessions(data); setLoading(false); })
+      .catch(() => setLoading(false));
   }, []);
 
   return (
@@ -75,7 +79,11 @@ export function GameHistoryPage() {
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <span className="text-xs font-mono px-2 py-1 rounded-lg bg-neon-green/10 text-neon-green border border-neon-green/20">
+              <span className={`text-xs font-mono px-2 py-1 rounded-lg border ${
+                s.state === 'ended'
+                  ? 'bg-neon-green/10 text-neon-green border-neon-green/20'
+                  : 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20'
+              }`}>
                 {s.state === 'ended' ? 'Ended' : s.state}
               </span>
               <ChevronRight className="w-5 h-5 text-gray-500" />

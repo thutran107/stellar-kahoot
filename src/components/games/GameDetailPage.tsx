@@ -44,8 +44,12 @@ export function GameDetailPage() {
 
   useEffect(() => {
     apiFetch(`/api/games/${id}`)
-      .then((r) => r.json())
-      .then((data) => { setDetail(data); setLoading(false); });
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
+      .then((data) => { setDetail(data); setLoading(false); })
+      .catch(() => { setDetail(null); setLoading(false); });
   }, [id]);
 
   if (loading) {
@@ -79,11 +83,10 @@ export function GameDetailPage() {
           <h1 className="text-3xl font-black tracking-tight">{session.quiz_title}</h1>
           <p className="text-gray-500 text-sm font-mono mt-1">
             {session.started_at
-              ? new Date(session.started_at).toLocaleDateString('en-US', {
+              ? `${new Date(session.started_at).toLocaleDateString('en-US', {
                   month: 'long', day: 'numeric', year: 'numeric',
-                })
-              : ''}
-            {' · '}PIN {session.pin}
+                })} · `
+              : ''}PIN {session.pin}
             {' · '}{participants.length} player{participants.length !== 1 ? 's' : ''}
             {' · '}{questions.length} question{questions.length !== 1 ? 's' : ''}
           </p>
@@ -148,7 +151,7 @@ export function GameDetailPage() {
                     const pct = total > 0 ? Math.round((count / total) * 100) : 0;
                     const isCorrect = i === q.correct_index;
                     return (
-                      <div key={i}>
+                      <div key={`${q.id}-${i}`}>
                         <div className="flex items-center justify-between mb-1">
                           <span
                             className={`text-sm font-medium ${
