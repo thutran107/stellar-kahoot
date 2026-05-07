@@ -86,10 +86,11 @@ gamesRouter.get('/:id', async (req: AuthRequest, res) => {
   const participantIds = (participants ?? []).map((p) => p.id);
   let answers: { question_id: string; selected_index: number }[] = [];
   if (participantIds.length > 0) {
-    const { data: aRows } = await supabaseAdmin
+    const { data: aRows, error: aErr } = await supabaseAdmin
       .from('answers')
       .select('question_id, selected_index')
       .in('participant_id', participantIds);
+    if (aErr) { res.status(500).json({ error: aErr.message }); return; }
     answers = aRows ?? [];
   }
 

@@ -94,6 +94,7 @@ async function startServer() {
 
     // Host actions
     socket.on("host-game", ({ customQuestions, quizId }) => {
+      if (questionTimer) { clearTimeout(questionTimer); questionTimer = null; }
       gameHostSocketId = socket.id;
       gamePin = generatePin();
       gameState = "LOBBY";
