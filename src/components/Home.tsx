@@ -42,7 +42,7 @@ export function Home() {
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
-          onClick={() => navigate('/host')}
+          onClick={() => navigate('/quizzes')}
           className="flex-1 py-4 px-6 text-white rounded-xl flex items-center justify-center gap-2 btn-funky"
         >
           <Plus className="w-6 h-6" />

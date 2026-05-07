@@ -112,11 +112,13 @@ export function PlayerView() {
   const COSMIC_AVATARS = ['🪐', '🌍', '🌎', '🌏', '🌕', '🌑', '☄️', '💫', '🌟', '🌌'];
   const [selectedAvatar, setSelectedAvatar] = useState(COSMIC_AVATARS[0]);
   
-  const { 
-    gamePin, gameState, joinGame, playerName, error, 
+  const {
+    gamePin, gameState, joinGame, playerName, error, connect,
     question, currentQuestionIndex, submitAnswer, answerFeedback,
     players, questionStartTime
   } = useGameStore();
+
+  useEffect(() => { connect(); }, [connect]);
 
   const handleJoin = (e: React.FormEvent) => {
     e.preventDefault();
