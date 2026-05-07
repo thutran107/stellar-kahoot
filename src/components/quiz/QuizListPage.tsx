@@ -56,12 +56,12 @@ export function QuizListPage() {
 
   return (
     <div className="min-h-screen p-6 max-w-4xl mx-auto">
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-4xl font-black tracking-tighter">Mission Control</h1>
+      <div className="flex items-center justify-between mb-8 gap-6">
+        <div className="min-w-0">
+          <h1 className="text-4xl font-black tracking-tighter truncate">Mission Control</h1>
           <p className="text-gray-400 text-sm mt-1">{user?.email}</p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex gap-3 shrink-0">
           <button
             onClick={() => setCreating(true)}
             className="py-2 px-4 text-white font-bold rounded-xl flex items-center gap-2 btn-funky"
