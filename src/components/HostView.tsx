@@ -226,10 +226,11 @@ export function HostView() {
           <div className="glass p-8 rounded-3xl mb-12">
              <h3 className="text-3xl font-bold mb-8 text-center">{question.text}</h3>
              <div className="grid grid-cols-1 gap-4 max-w-3xl mx-auto">
-               {question.options.map((opt, i) => {
+               {(() => {
+                 const total = answerCounts.reduce((a, b) => a + b, 0);
+                 return question.options.map((opt, i) => {
                  const isCorrect = i === question.correctIndex;
                  const count = answerCounts[i] ?? 0;
-                 const total = answerCounts.reduce((a, b) => a + b, 0);
                  const pct = total > 0 ? Math.round((count / total) * 100) : 0;
 
                  return (
@@ -238,7 +239,7 @@ export function HostView() {
                     className={`p-6 rounded-2xl flex flex-col gap-3 text-xl font-bold ${
                       isCorrect
                         ? 'bg-neon-green/20 border-2 border-neon-green text-neon-green shadow-[0_0_15px_rgba(52,211,153,0.3)]'
-                        : 'bg-red-500/20 border border-red-500/50 text-red-500 opacity-60 mix-blend-screen'
+                        : 'bg-red-500/20 border border-red-500/50 text-red-500 opacity-60'
                     }`}
                   >
                     <div className="flex items-center justify-between">
@@ -264,7 +265,8 @@ export function HostView() {
                     </div>
                   </div>
                  );
-               })}
+               });
+               })()}
              </div>
           </div>
 
