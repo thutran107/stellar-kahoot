@@ -1,20 +1,67 @@
 <div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+<img width="1200" height="475" alt="StellarTrivia Banner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
 </div>
 
-# Run and deploy your AI Studio app
+# StellarTrivia
 
-This contains everything you need to run your app locally.
+A real-time multiplayer quiz game with a space theme — host a game, share a PIN, and let players compete from any device. Built in the style of Kahoot.
 
-View your app in AI Studio: https://ai.studio/apps/d5757617-04a0-43a2-82e9-4402699fe28b
+## Features
+
+- **Live multiplayer** — Socket.io keeps all players in sync in real time
+- **Quiz builder** — create and edit quizzes with multiple-choice questions, time limits, and point multipliers
+- **Auto-advance timer** — questions automatically reveal results when time runs out; host can end early
+- **Vote stats** — per-option bar charts show how players voted after each question
+- **Results history** — browse past game sessions with final scores and per-question breakdowns
+- **Magic-link auth** — Supabase email auth, no passwords
+
+## Stack
+
+- **Backend** — Express + Socket.io, TypeScript
+- **Frontend** — React 19, React Router, Zustand, Tailwind CSS v4
+- **Database / Auth** — Supabase (PostgreSQL + magic-link auth)
+- **Build** — Vite
 
 ## Run Locally
 
-**Prerequisites:**  Node.js
-
+**Prerequisites:** Node.js 20+, a [Supabase](https://supabase.com) project
 
 1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+   ```bash
+   npm install
+   ```
+
+2. Copy the environment file and fill in your Supabase credentials:
+   ```bash
+   cp .env.example .env.local
+   ```
+
+   | Variable | Description |
+   |---|---|
+   | `VITE_SUPABASE_URL` | Your Supabase project URL |
+   | `VITE_SUPABASE_ANON_KEY` | Supabase anon (public) key |
+   | `SUPABASE_URL` | Same project URL (server-side) |
+   | `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key (bypasses RLS) |
+   | `PORT` | Port to run on (default `3001`) |
+
+3. Start the dev server:
+   ```bash
+   npm run dev
+   ```
+
+## Scripts
+
+| Command | Description |
+|---|---|
+| `npm run dev` | Dev server with hot reload (Express + Vite HMR) |
+| `npm run build` | Production bundle to `dist/` |
+| `npm run start` | Production server |
+| `npm run lint` | TypeScript type check |
+
+## How to Play
+
+1. Sign in and create a quiz at `/quizzes`
+2. Click **Play** to host a game — a 4-digit PIN is generated
+3. Players join at `/join` and enter the PIN
+4. Host starts the game; questions auto-advance when time runs out
+5. View past sessions and scores at `/games`
