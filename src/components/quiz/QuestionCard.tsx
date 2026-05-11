@@ -63,31 +63,44 @@ export function QuestionCard({ question, index, onUpdate, onDelete }: Props) {
     const form = new FormData();
     form.append('file', file);
     form.append('questionId', question.id);
-    const res = await apiFetchFormData('/api/upload/question-image', form);
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      setUploadError(body.error || 'Upload failed.');
+    try {
+      const res = await apiFetchFormData('/api/upload/question-image', form);
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setUploadError(body.error || 'Upload failed.');
+        setUploadState('error');
+        return;
+      }
+      const { url } = await res.json();
+      onUpdate(question.id, { image_url: url });
+      setUploadState('idle');
+    } catch {
+      setUploadError('Network error — please try again.');
       setUploadState('error');
-      return;
     }
-    const { url } = await res.json();
-    onUpdate(question.id, { image_url: url });
-    setUploadState('idle');
   }
 
   async function handleDeleteImage() {
     const url = question.image_url;
     if (!url) return;
     onUpdate(question.id, { image_url: null });
-    await apiFetch('/api/upload/question-image', {
-      method: 'DELETE',
-      body: JSON.stringify({ url }),
-    });
+    try {
+      const res = await apiFetch('/api/upload/question-image', {
+        method: 'DELETE',
+        body: JSON.stringify({ url }),
+      });
+      if (!res.ok) throw new Error();
+    } catch {
+      onUpdate(question.id, { image_url: url });
+      setUploadError('Could not delete image — please try again.');
+      setUploadState('error');
+    }
   }
 
   function handleDrop(e: React.DragEvent) {
     e.preventDefault();
     setDragOver(false);
+    if (uploadState === 'uploading') return;
     const file = e.dataTransfer.files[0];
     if (file) handleFileSelect(file);
   }
