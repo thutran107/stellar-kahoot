@@ -46,29 +46,32 @@ uploadRouter.post('/question-image', requireAuth, async (req: AuthRequest, res) 
     return;
   }
 
-  const rawQuestionId = req.body.questionId || 'misc';
-  const questionId = rawQuestionId.replace(/[^a-zA-Z0-9._-]/g, '_');
+  const rawQuestionId = req.body.questionId as string;
+  if (!rawQuestionId) {
+    res.status(400).json({ error: 'questionId required' });
+    return;
+  }
+
+  const questionId = rawQuestionId.replace(/[^a-zA-Z0-9_-]/g, '_');
   const timestamp = Date.now();
   const safeName = req.file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_');
   const path = `questions/${questionId}/${timestamp}-${safeName}`;
 
   // Verify caller owns this question
-  if (rawQuestionId !== 'misc') {
-    const { data: question, error: qErr } = await supabaseAdmin
-      .from('questions')
-      .select('quiz_id, quizzes!inner(host_id)')
-      .eq('id', rawQuestionId)
-      .single();
-    if (qErr || !question) {
-      res.status(404).json({ error: 'Question not found' });
-      return;
-    }
-    const quizzes = (question as any).quizzes as { host_id: string } | { host_id: string }[];
-    const hostId = Array.isArray(quizzes) ? quizzes[0]?.host_id : quizzes?.host_id;
-    if (hostId !== req.userId) {
-      res.status(403).json({ error: 'Forbidden' });
-      return;
-    }
+  const { data: question, error: qErr } = await supabaseAdmin
+    .from('questions')
+    .select('quiz_id, quizzes!inner(host_id)')
+    .eq('id', rawQuestionId)
+    .single();
+  if (qErr || !question) {
+    res.status(404).json({ error: 'Question not found' });
+    return;
+  }
+  const quizzes = (question as any).quizzes as { host_id: string } | { host_id: string }[];
+  const hostId = Array.isArray(quizzes) ? quizzes[0]?.host_id : quizzes?.host_id;
+  if (hostId !== req.userId) {
+    res.status(403).json({ error: 'Forbidden' });
+    return;
   }
 
   const { error: uploadError } = await supabaseAdmin.storage
