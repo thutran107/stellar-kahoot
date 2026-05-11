@@ -9,7 +9,8 @@ import {
   verticalListSortingStrategy, arrayMove,
 } from '@dnd-kit/sortable';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Plus, CheckCircle, Save, Upload } from 'lucide-react';
+import { ArrowLeft, Plus, CheckCircle, Save, Upload, Eye } from 'lucide-react';
+import { QuizPreviewModal } from './QuizPreviewModal';
 import { apiFetch } from '../../lib/api';
 import { QuestionCard, QuestionData } from './QuestionCard';
 
@@ -35,6 +36,8 @@ export function QuizBuilderPage() {
   const [importing, setImporting] = useState(false);
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState('');
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewIndex, setPreviewIndex] = useState(0);
   const importRef = useRef<HTMLInputElement>(null);
 
   const sensors = useSensors(
@@ -216,6 +219,14 @@ export function QuizBuilderPage() {
       <div className="fixed bottom-8 left-0 right-0 flex justify-center gap-4 px-6">
         <motion.button
           whileTap={{ scale: 0.95 }}
+          onClick={() => { setPreviewIndex(0); setPreviewOpen(true); }}
+          disabled={questions.length === 0}
+          className="px-6 py-3 rounded-xl font-bold flex items-center gap-2 glass border border-cyan-400/50 text-cyan-300 hover:border-cyan-400 shadow-xl disabled:opacity-50"
+        >
+          <Eye className="w-5 h-5" /> Preview
+        </motion.button>
+        <motion.button
+          whileTap={{ scale: 0.95 }}
           onClick={addQuestion}
           className="btn-funky px-6 py-3 rounded-xl text-white font-bold flex items-center gap-2 shadow-xl"
         >
@@ -243,6 +254,13 @@ export function QuizBuilderPage() {
           {quiz.is_ready ? 'Marked Ready' : 'Mark as Ready'}
         </motion.button>
       </div>
+      {previewOpen && (
+        <QuizPreviewModal
+          questions={questions}
+          initialIndex={previewIndex}
+          onClose={() => setPreviewOpen(false)}
+        />
+      )}
     </div>
   );
 }
