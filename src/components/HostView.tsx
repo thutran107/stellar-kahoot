@@ -185,12 +185,12 @@ export function HostView() {
           </div>
           
           {question.imageUrl && (
-            <div className="w-full rounded-2xl overflow-hidden mb-8" style={{ maxHeight: '40vh' }}>
+            <div className="w-full rounded-2xl overflow-hidden mb-8 bg-black/30 flex items-center justify-center" style={{ maxHeight: '40vh' }}>
               <img
                 src={question.imageUrl}
                 alt=""
-                className="w-full object-cover"
-                style={{ maxHeight: '40vh' }}
+                className="object-contain"
+                style={{ maxHeight: '40vh', maxWidth: '100%' }}
               />
             </div>
           )}
