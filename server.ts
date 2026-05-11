@@ -6,6 +6,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { quizRouter } from "./server/routes/quiz.js";
 import { gamesRouter } from "./server/routes/games.js";
+import { uploadRouter } from "./server/routes/upload.js";
 import { supabaseAdmin } from "./server/lib/supabase.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -333,6 +334,7 @@ async function startServer() {
   app.use(express.json());
   app.use('/api/quizzes', quizRouter);
   app.use('/api/games', gamesRouter);
+  app.use('/api/upload', uploadRouter);
 
   app.get("/api/health", (_req, res) => {
     res.json({ status: "ok" });
