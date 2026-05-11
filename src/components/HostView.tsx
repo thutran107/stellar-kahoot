@@ -69,6 +69,7 @@ export function HostView() {
           correctIndex: q.correct_index,
           timeLimit: q.time_limit_sec * 1000,
           pointMultiplier: q.point_multiplier,
+          imageUrl: q.image_url ?? undefined,
         }));
         setPendingQuestions(qs);
         setLoadingQuiz(false);
@@ -183,6 +184,16 @@ export function HostView() {
             </div>
           </div>
           
+          {question.imageUrl && (
+            <div className="w-full rounded-2xl overflow-hidden mb-8" style={{ maxHeight: '40vh' }}>
+              <img
+                src={question.imageUrl}
+                alt=""
+                className="w-full object-cover"
+                style={{ maxHeight: '40vh' }}
+              />
+            </div>
+          )}
           <h2 className="text-5xl md:text-6xl font-light italic text-center mb-16 leading-tight">
             {question.text}
           </h2>
