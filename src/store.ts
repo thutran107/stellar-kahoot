@@ -21,6 +21,7 @@ export interface Question {
   correctIndex: number;
   timeLimit: number;
   pointMultiplier?: number;
+  imageUrl?: string;
 }
 
 interface GameStore {
