@@ -11,3 +11,14 @@ export async function apiFetch(path: string, options?: RequestInit): Promise<Res
     },
   });
 }
+
+export async function apiFetchFormData(path: string, formData: FormData): Promise<Response> {
+  const { data: { session } } = await supabase.auth.getSession();
+  return fetch(path, {
+    method: 'POST',
+    body: formData,
+    headers: {
+      ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+    },
+  });
+}
