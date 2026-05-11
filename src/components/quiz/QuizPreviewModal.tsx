@@ -26,6 +26,7 @@ const BADGE_BG = [
   'bg-yellow-500',
   'bg-green-500',
 ];
+const OPTION_LABELS = ['A', 'B', 'C', 'D'];
 
 export function QuizPreviewModal({ questions, initialIndex, onClose }: Props) {
   const [index, setIndex] = useState(initialIndex);
@@ -62,6 +63,7 @@ export function QuizPreviewModal({ questions, initialIndex, onClose }: Props) {
   }
 
   function goBack() {
+    if (isFirst) return;
     setIndex((i) => i - 1);
     setRevealed(false);
   }
@@ -137,7 +139,7 @@ export function QuizPreviewModal({ questions, initialIndex, onClose }: Props) {
                       ${revealed && isCorrect ? 'bg-neon-green' : BADGE_BG[i]}
                     `}
                   >
-                    {i + 1}
+                    {OPTION_LABELS[i]}
                   </div>
                   {opt || (
                     <span className="text-gray-500 italic font-normal">Empty option</span>
