@@ -130,7 +130,7 @@ quizRouter.put('/:id/questions/reorder', async (req: AuthRequest, res) => {
 });
 
 quizRouter.patch('/questions/:qid', async (req: AuthRequest, res) => {
-  const allowed = ['text', 'options', 'correct_index', 'time_limit_sec', 'point_multiplier'];
+  const allowed = ['text', 'options', 'correct_index', 'time_limit_sec', 'point_multiplier', 'image_url'];
   const updates: Record<string, unknown> = {};
   for (const key of allowed) {
     if (req.body[key] !== undefined) updates[key] = req.body[key];
