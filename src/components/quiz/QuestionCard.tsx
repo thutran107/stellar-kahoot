@@ -1,7 +1,8 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { GripVertical, Trash2, ChevronDown, ChevronUp, Check } from 'lucide-react';
-import { useState } from 'react';
+import { GripVertical, Trash2, ChevronDown, ChevronUp, Check, ImageIcon, X, Loader2 } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { apiFetch, apiFetchFormData } from '../../lib/api';
 
 export interface QuestionData {
   id: string;
@@ -11,6 +12,7 @@ export interface QuestionData {
   time_limit_sec: 10 | 20 | 30;
   point_multiplier: 1 | 2;
   order_index: number;
+  image_url?: string | null;
 }
 
 interface Props {
@@ -30,6 +32,11 @@ const OPTION_LABELS = ['A', 'B', 'C', 'D'];
 
 export function QuestionCard({ question, index, onUpdate, onDelete }: Props) {
   const [expanded, setExpanded] = useState(false);
+  const [uploadState, setUploadState] = useState<'idle' | 'uploading' | 'error'>('idle');
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [dragOver, setDragOver] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: question.id });
 
@@ -38,6 +45,52 @@ export function QuestionCard({ question, index, onUpdate, onDelete }: Props) {
     transition,
     opacity: isDragging ? 0.4 : 1,
   };
+
+  async function handleFileSelect(file: File) {
+    const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    if (!allowed.includes(file.type)) {
+      setUploadError('Unsupported type. Use PNG, JPG, WebP, or GIF.');
+      setUploadState('error');
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setUploadError('File too large — max 10 MB.');
+      setUploadState('error');
+      return;
+    }
+    setUploadState('uploading');
+    setUploadError(null);
+    const form = new FormData();
+    form.append('file', file);
+    form.append('questionId', question.id);
+    const res = await apiFetchFormData('/api/upload/question-image', form);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setUploadError(body.error || 'Upload failed.');
+      setUploadState('error');
+      return;
+    }
+    const { url } = await res.json();
+    onUpdate(question.id, { image_url: url });
+    setUploadState('idle');
+  }
+
+  async function handleDeleteImage() {
+    const url = question.image_url;
+    if (!url) return;
+    onUpdate(question.id, { image_url: null });
+    await apiFetch('/api/upload/question-image', {
+      method: 'DELETE',
+      body: JSON.stringify({ url }),
+    });
+  }
+
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault();
+    setDragOver(false);
+    const file = e.dataTransfer.files[0];
+    if (file) handleFileSelect(file);
+  }
 
   return (
     <div ref={setNodeRef} style={style} className="glass rounded-2xl overflow-hidden">
@@ -54,8 +107,9 @@ export function QuestionCard({ question, index, onUpdate, onDelete }: Props) {
           <p className="font-bold truncate">
             {question.text || <span className="text-gray-500 italic font-normal">No question text</span>}
           </p>
-          <p className="text-xs text-gray-500 mt-0.5">
+          <p className="text-xs text-gray-500 mt-0.5 flex items-center gap-1">
             {question.time_limit_sec}s · {question.point_multiplier}× pts · {question.options.filter(Boolean).length} options
+            {question.image_url && <><span>·</span><ImageIcon className="w-3 h-3 text-neon-blue" /></>}
           </p>
         </div>
         <button onClick={() => setExpanded((e) => !e)} className="p-2 glass rounded-xl hover:bg-white/10">
@@ -68,6 +122,54 @@ export function QuestionCard({ question, index, onUpdate, onDelete }: Props) {
 
       {expanded && (
         <div className="border-t border-white/10 p-4 space-y-4">
+          {/* Image upload zone */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif"
+            className="hidden"
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFileSelect(f); e.target.value = ''; }}
+          />
+
+          {question.image_url ? (
+            <div className="relative rounded-xl overflow-hidden" style={{ height: 160 }}>
+              <img
+                src={question.image_url}
+                alt="Question image"
+                className="w-full h-full object-cover"
+              />
+              <button
+                onClick={handleDeleteImage}
+                className="absolute top-2 right-2 p-1 rounded-full bg-black/60 hover:bg-red-500/80 transition-colors"
+              >
+                <X className="w-4 h-4 text-white" />
+              </button>
+            </div>
+          ) : uploadState === 'uploading' ? (
+            <div className="flex items-center justify-center rounded-xl border border-white/10 bg-white/5" style={{ height: 100 }}>
+              <Loader2 className="w-6 h-6 text-neon-blue animate-spin" />
+            </div>
+          ) : (
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              onDrop={handleDrop}
+              onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+              onDragLeave={() => setDragOver(false)}
+              className={`flex flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed cursor-pointer transition-colors ${
+                dragOver ? 'border-neon-blue bg-neon-blue/10' : 'border-white/20 hover:border-white/40 bg-white/5'
+              }`}
+              style={{ height: 100 }}
+            >
+              <ImageIcon className="w-6 h-6 text-gray-500" />
+              <span className="text-sm text-gray-400">Drop image or click to upload</span>
+              <span className="text-xs text-gray-600">PNG, JPG, WebP, GIF · max 10 MB</span>
+            </div>
+          )}
+
+          {uploadState === 'error' && uploadError && (
+            <p className="text-xs text-red-400 -mt-2">{uploadError}</p>
+          )}
+
           <textarea
             value={question.text}
             onChange={(e) => onUpdate(question.id, { text: e.target.value })}
