@@ -95,7 +95,8 @@ When `image_url` is set, a small image icon badge appears in the collapsed card 
 
 1. User clicks `×` on preview
 2. `updateQuestion(id, { image_url: null })` → clears DB column
-3. File is deleted from Supabase Storage via a `DELETE /api/upload/question-image` call (sends the stored URL/path, server resolves the storage path and removes it)
+3. Client calls `DELETE /api/upload/question-image` with `{ url: storedUrl }` in the body
+4. Server strips the Supabase Storage base URL prefix (`SUPABASE_URL/storage/v1/object/public/question-images/`) to recover the storage path, then calls `supabaseAdmin.storage.from('question-images').remove([path])`
 
 ## Host Screen (HostView) — Live Gameplay
 
@@ -118,10 +119,11 @@ No server-side socket changes needed — the full question object is already bro
 
 | File | Change |
 |---|---|
-| `supabase/` | Create `question-images` storage bucket (manual or migration) |
+| Supabase dashboard | Create `question-images` public bucket (one-time manual step) |
 | `server/routes/upload.ts` | New — upload + delete endpoints |
 | `server/routes/quiz.ts` | Add `image_url` to PATCH allowed fields |
 | `server.ts` | Mount upload router |
 | `src/store.ts` | Add `imageUrl?: string` to `Question` |
 | `src/components/quiz/QuestionCard.tsx` | Add `image_url` to `QuestionData`, image upload zone UI |
 | `src/components/HostView.tsx` | Image mapping + full-width banner render |
+| `package.json` | Add `multer` + `@types/multer` dependencies |
