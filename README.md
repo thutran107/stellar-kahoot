@@ -103,8 +103,33 @@ In Supabase → **SQL Editor**, run the contents of `db/migrations/001_rls_game_
 
 ## How to Play
 
+### For the host
+
 1. Sign in and create a quiz at `/quizzes`
-2. Click **Play** to host a game — a 4-digit PIN is generated
-3. Players join at `/join` and enter the PIN
-4. Host starts the game; questions auto-advance when time runs out
-5. View past sessions and scores at `/games`
+2. Click **Play** — a 4-digit PIN is generated for your session
+3. Share the PIN with players; they join at `/join`
+4. Click **Start Game** when everyone is in the lobby
+5. Each question auto-advances when its timer runs out (or click **End Question** early)
+6. After each question, a results screen shows the correct answer and how players voted
+7. After the final question, a leaderboard shows the final standings
+8. View all past sessions and scores at `/games`
+
+### For players
+
+1. Go to `/join` and enter the host's 4-digit PIN and a display name
+2. Wait in the lobby until the host starts
+3. When a question appears, tap the answer option (A / B / C / D) before time runs out
+4. You get instant feedback — green if correct, red if wrong — and see how many points you earned
+5. The leaderboard updates after every question
+
+## Scoring
+
+Points are awarded based on **how quickly you answer correctly relative to other players**, not on absolute response time.
+
+| Correct answer order | Points |
+|---|---|
+| 1st correct answer in the room | **1,000 pts** |
+| 2nd correct answer | **800 pts** |
+| 3rd correct answer or later | **500 pts** |
+
+Wrong answers score **0 pts**. Unanswered questions also score 0. The player with the highest cumulative score at the end wins.
