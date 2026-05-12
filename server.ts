@@ -38,6 +38,7 @@ async function startServer() {
   let dbParticipantIds: Record<string, string> = {}; // socketId → participants.id
   let questionTimer: ReturnType<typeof setTimeout> | null = null;
   let answerCounts: number[] = [];
+  let correctAnswerCount = 0;
 
   const COSMIC_COLORS = [
     '#f472b6', // pink
@@ -106,6 +107,7 @@ async function startServer() {
       dbSessionId = null;
       dbParticipantIds = {};
       answerCounts = [];
+      correctAnswerCount = 0;
       broadcastState();
       socket.emit("host-joined", { gamePin });
 
@@ -137,6 +139,7 @@ async function startServer() {
       });
 
       answerCounts = new Array(questions[currentQuestionIndex].options.length).fill(0);
+      correctAnswerCount = 0;
 
       broadcastState();
 
@@ -174,6 +177,7 @@ async function startServer() {
         });
 
         answerCounts = new Array(questions[currentQuestionIndex].options.length).fill(0);
+        correctAnswerCount = 0;
 
         broadcastState();
 
@@ -267,12 +271,10 @@ async function startServer() {
       const isCorrect = answerIndex === currentQuestion.correctIndex;
       
       const timeTaken = Date.now() - questionStartTime;
-      const maxTime = currentQuestion.timeLimit || 10000; // 10 seconds default
-      
+
       if (isCorrect) {
-        const speedFactor = 0.5 + 0.5 * Math.max(0, maxTime - timeTaken) / maxTime;
-        const multiplier = currentQuestion.pointMultiplier || 1;
-        const points = Math.round(1000 * multiplier * speedFactor);
+        const points = correctAnswerCount === 0 ? 1000 : correctAnswerCount === 1 ? 800 : 500;
+        correctAnswerCount++;
         player.score += points;
         player.lastPointsEarned = points;
       } else {
