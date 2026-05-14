@@ -147,11 +147,11 @@ export function PlayerView() {
 
           <form onSubmit={handleJoin} className="space-y-6 relative z-10">
             <div>
-              <input 
-                type="text" 
+              <input
+                type="text"
                 value={pinInput}
                 onChange={(e) => setPinInput(e.target.value.replace(/[^0-9]/g, ''))}
-                maxLength={4}
+                maxLength={6}
                 className="w-full glass rounded-xl px-4 py-4 text-center text-3xl font-black text-white focus:outline-none focus:border-neon-blue focus:ring-1 focus:ring-neon-blue outline-none transition-all tracking-widest placeholder-gray-500"
                 placeholder="PIN"
                 required
