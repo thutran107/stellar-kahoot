@@ -42,6 +42,7 @@ interface GameSession {
   currentQuestionIndex: number;
   questionStartTime: number;
   questionTimer: ReturnType<typeof setTimeout> | null;
+  gracePeriodTimer: ReturnType<typeof setTimeout> | null;
   answerCounts: number[];
   correctAnswerCount: number;
   dbSessionId: string | null;
@@ -125,7 +126,9 @@ async function startServer() {
       for (const [pin, s] of sessions.entries()) {
         if (s.hostSocketId === socket.id) {
           if (s.questionTimer) clearTimeout(s.questionTimer);
+          if (s.gracePeriodTimer) clearTimeout(s.gracePeriodTimer);
           sessions.delete(pin);
+          socket.leave(pin);
         }
       }
 
@@ -139,6 +142,7 @@ async function startServer() {
         currentQuestionIndex: 0,
         questionStartTime: 0,
         questionTimer: null,
+        gracePeriodTimer: null,
         answerCounts: [],
         correctAnswerCount: 0,
         dbSessionId: null,
@@ -237,8 +241,11 @@ async function startServer() {
         session.state = "FINAL_LEADERBOARD";
         broadcastState(session);
 
-        // Delete session after 5-minute grace period
-        setTimeout(() => sessions.delete(session.pin), 5 * 60 * 1000);
+        const gracePeriodTimer = setTimeout(() => {
+          io.in(session.pin).socketsLeave(session.pin);
+          sessions.delete(session.pin);
+        }, 5 * 60 * 1000);
+        session.gracePeriodTimer = gracePeriodTimer;
 
         if (session.dbSessionId) {
           (async () => {
@@ -359,6 +366,7 @@ async function startServer() {
         if (session.hostSocketId === socket.id) {
           io.to(pin).emit("game-ended", "Host disconnected.");
           if (session.questionTimer) clearTimeout(session.questionTimer);
+          if (session.gracePeriodTimer) clearTimeout(session.gracePeriodTimer);
           if (session.dbSessionId) {
             (async () => {
               const { error } = await supabaseAdmin
@@ -373,11 +381,13 @@ async function startServer() {
         }
       }
 
-      // Player disconnecting — remove from their session
-      const session = sessionForSocket(socket);
-      if (session?.players[socket.id]) {
-        delete session.players[socket.id];
-        broadcastState(session);
+      // Player disconnecting — scan sessions since socket.rooms is empty at disconnect time
+      for (const session of sessions.values()) {
+        if (session.players[socket.id]) {
+          delete session.players[socket.id];
+          broadcastState(session);
+          break;
+        }
       }
     });
   });
