@@ -1,5 +1,4 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { useEffect } from 'react';
 import { Home } from './components/Home';
 import { HostView } from './components/HostView';
 import { PlayerView } from './components/PlayerView';
@@ -7,16 +6,13 @@ import { CosmicBackground } from './components/CosmicBackground';
 import { DemoPlayer } from './components/DemoPlayer';
 import { LoginPage } from './components/auth/LoginPage';
 import { RequireAuth } from './components/auth/RequireAuth';
+import { AuthGate } from './components/auth/AuthGate';
 import { QuizListPage } from './components/quiz/QuizListPage';
 import { QuizBuilderPage } from './components/quiz/QuizBuilderPage';
 import { GameHistoryPage } from './components/games/GameHistoryPage';
 import { GameDetailPage } from './components/games/GameDetailPage';
-import { useAuthStore } from './store/authStore';
 
 export default function App() {
-  const init = useAuthStore((s) => s.init);
-  useEffect(() => { init(); }, [init]);
-
   return (
     <Router>
       <div className="relative min-h-screen overflow-hidden">
@@ -30,11 +26,11 @@ export default function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/join" element={<PlayerView />} />
             <Route path="/demo" element={<DemoPlayer />} />
-            <Route path="/quizzes" element={<RequireAuth><QuizListPage /></RequireAuth>} />
-            <Route path="/quizzes/:id/edit" element={<RequireAuth><QuizBuilderPage /></RequireAuth>} />
-            <Route path="/games" element={<RequireAuth><GameHistoryPage /></RequireAuth>} />
-            <Route path="/games/:id" element={<RequireAuth><GameDetailPage /></RequireAuth>} />
-            <Route path="/host" element={<RequireAuth><HostView /></RequireAuth>} />
+            <Route path="/quizzes" element={<AuthGate><RequireAuth><QuizListPage /></RequireAuth></AuthGate>} />
+            <Route path="/quizzes/:id/edit" element={<AuthGate><RequireAuth><QuizBuilderPage /></RequireAuth></AuthGate>} />
+            <Route path="/games" element={<AuthGate><RequireAuth><GameHistoryPage /></RequireAuth></AuthGate>} />
+            <Route path="/games/:id" element={<AuthGate><RequireAuth><GameDetailPage /></RequireAuth></AuthGate>} />
+            <Route path="/host" element={<AuthGate><RequireAuth><HostView /></RequireAuth></AuthGate>} />
           </Routes>
         </div>
       </div>
