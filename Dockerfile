@@ -27,6 +27,6 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 
 ENV NODE_ENV=production
-EXPOSE 3001
+EXPOSE 3000
 
 CMD ["node_modules/.bin/tsx", "server.ts"]
