@@ -34,7 +34,7 @@ export function PlayerProgressBar({ startTime, timeLimit }: PlayerProgressBarPro
           width: `${progress}%`,
           backgroundColor: fillColor,
           boxShadow: `0 0 8px ${isLow ? 'rgba(244,63,94,0.6)' : 'rgba(34,211,238,0.6)'}`,
-          transition: 'width 0.1s linear, background-color 0.3s ease',
+          transition: 'background-color 0.3s ease',
         }}
       />
     </div>

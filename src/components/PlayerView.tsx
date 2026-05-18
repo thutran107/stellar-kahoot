@@ -3,6 +3,8 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useGameStore } from '../store';
 import { Rocket, CheckCircle2, XCircle, Clock, Trophy } from 'lucide-react';
+import { CountdownTimer } from './CountdownTimer';
+import { PlayerProgressBar } from './PlayerProgressBar';
 
 function PlayerThemeEffects() {
   return (
@@ -245,6 +247,9 @@ export function PlayerView() {
 
         {gameState === 'QUESTION_ACTIVE' && question && answerFeedback === null && (
           <div className="flex-1 flex flex-col justify-center max-w-2xl mx-auto w-full h-full">
+            <div className="flex justify-center mb-4">
+              <CountdownTimer startTime={questionStartTime} timeLimit={question.timeLimit} />
+            </div>
             <h3 className="text-center text-gray-400 font-bold mb-8 tracking-widest">SELECT YOUR ANSWER</h3>
             <div className="grid grid-cols-2 gap-4 h-[60vh]">
               {question.options.map((_, i) => (
@@ -259,7 +264,7 @@ export function PlayerView() {
                     ${i === 3 ? 'bg-green-500/20 border-green-500 hover:bg-green-500/30 shadow-[0_0_15px_rgba(34,197,94,0.2)]' : ''}
                   `}
                 >
-                  <div className={`w-16 h-16 rounded-full flex items-center justify-center border-2 
+                  <div className={`w-16 h-16 rounded-full flex items-center justify-center border-2
                     ${i === 0 ? 'border-red-500 bg-red-900/50 text-white' : ''}
                     ${i === 1 ? 'border-blue-500 bg-blue-900/50 text-white' : ''}
                     ${i === 2 ? 'border-yellow-500 bg-yellow-900/50 text-white' : ''}
@@ -270,6 +275,7 @@ export function PlayerView() {
                 </motion.button>
               ))}
             </div>
+            <PlayerProgressBar startTime={questionStartTime} timeLimit={question.timeLimit} />
           </div>
         )}
 
