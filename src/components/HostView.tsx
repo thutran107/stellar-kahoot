@@ -6,6 +6,8 @@ import { Users, Play, SkipForward, Trophy } from 'lucide-react';
 import { useGameStore, Question } from '../store';
 import { apiFetch } from '../lib/api';
 import { CountdownTimer } from './CountdownTimer';
+import { TopicRevealScreen } from './TopicReveal';
+import { TOPIC_META, TopicKey } from '../lib/topics';
 
 function TimerBar({ startTime, timeLimit }: { startTime: number, timeLimit: number }) {
   const [progress, setProgress] = useState(100);
@@ -106,13 +108,13 @@ export function HostView() {
   const joinUrl = `${publicBase}/join?pin=${gamePin}`;
 
   return (
-    <div className={`min-h-screen flex flex-col p-4 md:p-8 relative${bigScreen ? ' big-screen' : ''}`}>
+    <div className={`h-screen overflow-hidden flex flex-col p-4 md:p-8 relative${bigScreen ? ' big-screen' : ''}`}>
       {gameState === 'QUESTION_ACTIVE' && question && (
         <TimerBar startTime={questionStartTime} timeLimit={question.timeLimit} />
       )}
       
       {gameState === 'LOBBY' && (
-        <div className="flex-1 flex flex-col items-center justify-center max-w-5xl mx-auto w-full">
+        <div className="flex-1 flex flex-col items-center justify-center max-w-5xl mx-auto w-full overflow-y-auto">
           <h2 className="text-5xl font-bold text-center mb-12 text-neon-blue font-mono tracking-widest">JOIN THE CREW</h2>
           
           <div className="flex flex-col md:flex-row items-center gap-16 w-full justify-center glass p-12 rounded-3xl mb-12 border-dashed border-2 border-indigo-400/30">
@@ -188,9 +190,13 @@ export function HostView() {
         </div>
       )}
 
+      {gameState === 'TOPIC_REVEAL' && question?.topic && (
+        <TopicRevealScreen topic={question.topic} />
+      )}
+
       {gameState === 'QUESTION_ACTIVE' && question && (
-        <div className="flex-1 flex flex-col max-w-6xl mx-auto w-full pt-12">
-          <div className="flex items-center mb-12">
+        <div className="flex-1 flex flex-col max-w-6xl mx-auto w-full pt-4">
+          <div className="flex items-center mb-4">
             <div className="player-status flex-1 text-2xl font-mono text-gray-400">
               Question {currentQuestionIndex + 1} <span className="text-gray-600">/ {totalQuestions}</span>
             </div>
@@ -204,22 +210,32 @@ export function HostView() {
           </div>
           
           {question.imageUrl && (
-            <div className="w-full rounded-2xl overflow-hidden mb-8 bg-black/30 flex items-center justify-center" style={{ maxHeight: '40vh' }}>
+            <div className="w-full rounded-2xl overflow-hidden mb-3 bg-black/30 flex items-center justify-center" style={{ maxHeight: '20vh' }}>
               <img
                 src={question.imageUrl}
                 alt=""
                 className="object-contain"
-                style={{ maxHeight: '40vh', maxWidth: '100%' }}
+                style={{ maxHeight: '20vh', maxWidth: '100%' }}
               />
             </div>
           )}
-          <h2 className="question-text text-5xl md:text-6xl font-light italic text-center mb-16 leading-tight">
+          {question.topic && (() => {
+            const meta = TOPIC_META[question.topic as TopicKey];
+            return (
+              <div className="flex justify-center mb-3">
+                <span className={`px-4 py-1 rounded-full text-sm font-bold uppercase tracking-widest border ${meta.bg} ${meta.color}`}>
+                  {meta.label}
+                </span>
+              </div>
+            );
+          })()}
+          <h2 className="question-text text-4xl md:text-5xl font-light italic text-center mb-4 leading-tight">
             {question.text}
           </h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-auto mb-12">
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-20">
             {question.options.map((opt, i) => (
-              <div key={i} className={`answer-option glass p-8 rounded-[2rem] text-2xl text-center font-bold relative overflow-hidden focus:outline-none transition-transform hover:scale-[1.02]
+              <div key={i} className={`answer-option glass p-5 rounded-[2rem] text-xl text-center font-bold relative overflow-hidden focus:outline-none transition-transform hover:scale-[1.02]
                 ${i === 0 ? 'border-l-4 border-l-red-500 hover:shadow-[0_0_15px_rgba(239,68,68,0.2)]' : ''}
                 ${i === 1 ? 'border-l-4 border-l-blue-500 hover:shadow-[0_0_15px_rgba(59,130,246,0.2)]' : ''}
                 ${i === 2 ? 'border-l-4 border-l-yellow-500 hover:shadow-[0_0_15px_rgba(234,179,8,0.2)]' : ''}
@@ -250,7 +266,7 @@ export function HostView() {
       )}
 
       {gameState === 'QUESTION_RESULTS' && question && (
-        <div className="flex-1 flex flex-col max-w-6xl mx-auto w-full pt-12">
+        <div className="flex-1 flex flex-col max-w-6xl mx-auto w-full pt-12 overflow-y-auto">
           <h2 className="text-4xl text-center mb-8 font-mono tracking-widest text-gray-400">MISSION UPDATE</h2>
           
           <div className="glass p-8 rounded-3xl mb-12">
@@ -305,14 +321,14 @@ export function HostView() {
               onClick={nextQuestion}
               className="py-4 px-8 text-white font-black rounded-[2rem] text-lg flex items-center gap-2 uppercase tracking-tighter btn-funky"
             >
-              <Play className="w-5 h-5" /> Next Phase
+              <Play className="w-5 h-5" /> Next
             </button>
           </div>
         </div>
       )}
 
       {gameState === 'FINAL_LEADERBOARD' && (
-        <div className="flex-1 flex flex-col max-w-4xl mx-auto w-full pt-12">
+        <div className="flex-1 flex flex-col max-w-4xl mx-auto w-full pt-12 overflow-y-auto">
           <TerminalHeader text="MISSION OVER" />
           
           <div className="mt-12 flex items-end justify-center gap-4 h-64 mb-16">
