@@ -31,23 +31,27 @@ interface Question {
   timeLimit: number;
   pointMultiplier?: number;
   imageUrl?: string;
+  topic?: string | null;
 }
 
 interface GameSession {
   pin: string;
   hostSocketId: string;
-  state: "LOBBY" | "QUESTION_ACTIVE" | "QUESTION_RESULTS" | "FINAL_LEADERBOARD";
+  state: "LOBBY" | "TOPIC_REVEAL" | "QUESTION_ACTIVE" | "QUESTION_RESULTS" | "FINAL_LEADERBOARD";
   players: Record<string, Player>;
   questions: Question[];
   currentQuestionIndex: number;
   questionStartTime: number;
   questionTimer: ReturnType<typeof setTimeout> | null;
+  topicRevealTimer: ReturnType<typeof setTimeout> | null;
   gracePeriodTimer: ReturnType<typeof setTimeout> | null;
   answerCounts: number[];
   correctAnswerCount: number;
   dbSessionId: string | null;
   dbParticipantIds: Record<string, string>;
 }
+
+const TOPIC_REVEAL_MS = 3000;
 
 async function startServer() {
   const app = express();
@@ -113,6 +117,39 @@ async function startServer() {
     }
   }
 
+  function activateQuestion(session: GameSession) {
+    session.state = "QUESTION_ACTIVE";
+    session.questionStartTime = Date.now();
+    session.answerCounts = new Array(session.questions[session.currentQuestionIndex].options.length).fill(0);
+    session.correctAnswerCount = 0;
+    broadcastState(session);
+    if (session.questionTimer) { clearTimeout(session.questionTimer); session.questionTimer = null; }
+    session.questionTimer = setTimeout(
+      () => triggerShowResults(session),
+      session.questions[session.currentQuestionIndex].timeLimit ?? 20_000
+    );
+  }
+
+  function startQuestion(session: GameSession) {
+    if (session.topicRevealTimer) { clearTimeout(session.topicRevealTimer); session.topicRevealTimer = null; }
+    if (session.questionTimer) { clearTimeout(session.questionTimer); session.questionTimer = null; }
+
+    Object.keys(session.players).forEach((pId) => {
+      session.players[pId].hasAnswered = false;
+      session.players[pId].lastAnswerTime = 0;
+      session.players[pId].lastPointsEarned = 0;
+    });
+
+    const q = session.questions[session.currentQuestionIndex];
+    if (q.topic) {
+      session.state = "TOPIC_REVEAL";
+      broadcastState(session);
+      session.topicRevealTimer = setTimeout(() => activateQuestion(session), TOPIC_REVEAL_MS);
+    } else {
+      activateQuestion(session);
+    }
+  }
+
   function sessionForSocket(socket: { id: string; rooms: Set<string> }): GameSession | undefined {
     const pin = [...socket.rooms].find((r) => r !== socket.id && sessions.has(r));
     return pin ? sessions.get(pin) : undefined;
@@ -126,6 +163,7 @@ async function startServer() {
       for (const [pin, s] of sessions.entries()) {
         if (s.hostSocketId === socket.id) {
           if (s.questionTimer) clearTimeout(s.questionTimer);
+          if (s.topicRevealTimer) clearTimeout(s.topicRevealTimer);
           if (s.gracePeriodTimer) clearTimeout(s.gracePeriodTimer);
           sessions.delete(pin);
           socket.leave(pin);
@@ -142,6 +180,7 @@ async function startServer() {
         currentQuestionIndex: 0,
         questionStartTime: 0,
         questionTimer: null,
+        topicRevealTimer: null,
         gracePeriodTimer: null,
         answerCounts: [],
         correctAnswerCount: 0,
@@ -170,22 +209,7 @@ async function startServer() {
       const session = sessionForSocket(socket);
       if (!session || session.hostSocketId !== socket.id || session.questions.length === 0) return;
 
-      session.state = "QUESTION_ACTIVE";
-      session.questionStartTime = Date.now();
-      Object.keys(session.players).forEach((pId) => {
-        session.players[pId].hasAnswered = false;
-        session.players[pId].lastAnswerTime = 0;
-        session.players[pId].lastPointsEarned = 0;
-      });
-      session.answerCounts = new Array(session.questions[session.currentQuestionIndex].options.length).fill(0);
-      session.correctAnswerCount = 0;
-      broadcastState(session);
-
-      if (session.questionTimer) clearTimeout(session.questionTimer);
-      session.questionTimer = setTimeout(
-        () => triggerShowResults(session),
-        session.questions[session.currentQuestionIndex].timeLimit ?? 20_000
-      );
+      startQuestion(session);
 
       if (session.dbSessionId) {
         (async () => {
@@ -210,22 +234,7 @@ async function startServer() {
 
       if (session.currentQuestionIndex < session.questions.length - 1) {
         session.currentQuestionIndex++;
-        session.state = "QUESTION_ACTIVE";
-        session.questionStartTime = Date.now();
-        Object.keys(session.players).forEach((pId) => {
-          session.players[pId].hasAnswered = false;
-          session.players[pId].lastAnswerTime = 0;
-          session.players[pId].lastPointsEarned = 0;
-        });
-        session.answerCounts = new Array(session.questions[session.currentQuestionIndex].options.length).fill(0);
-        session.correctAnswerCount = 0;
-        broadcastState(session);
-
-        if (session.questionTimer) clearTimeout(session.questionTimer);
-        session.questionTimer = setTimeout(
-          () => triggerShowResults(session),
-          session.questions[session.currentQuestionIndex].timeLimit ?? 20_000
-        );
+        startQuestion(session);
 
         if (session.dbSessionId) {
           (async () => {
@@ -238,6 +247,7 @@ async function startServer() {
         }
       } else {
         if (session.questionTimer) { clearTimeout(session.questionTimer); session.questionTimer = null; }
+        if (session.topicRevealTimer) { clearTimeout(session.topicRevealTimer); session.topicRevealTimer = null; }
         session.state = "FINAL_LEADERBOARD";
         broadcastState(session);
 
@@ -366,6 +376,7 @@ async function startServer() {
         if (session.hostSocketId === socket.id) {
           io.to(pin).emit("game-ended", "Host disconnected.");
           if (session.questionTimer) clearTimeout(session.questionTimer);
+          if (session.topicRevealTimer) clearTimeout(session.topicRevealTimer);
           if (session.gracePeriodTimer) clearTimeout(session.gracePeriodTimer);
           if (session.dbSessionId) {
             (async () => {
