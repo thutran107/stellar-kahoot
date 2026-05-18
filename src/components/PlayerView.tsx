@@ -5,6 +5,8 @@ import { useGameStore } from '../store';
 import { Rocket, CheckCircle2, XCircle, Clock, Trophy } from 'lucide-react';
 import { CountdownTimer } from './CountdownTimer';
 import { PlayerProgressBar } from './PlayerProgressBar';
+import { TopicRevealScreen } from './TopicReveal';
+import { TOPIC_META, TopicKey } from '../lib/topics';
 
 function PlayerThemeEffects() {
   return (
@@ -167,7 +169,7 @@ export function PlayerView() {
                 onChange={(e) => setNameInput(e.target.value.toUpperCase())}
                 maxLength={12}
                 className="w-full glass rounded-xl px-4 py-4 text-center text-2xl font-bold text-white focus:outline-none focus:border-neon-pink focus:ring-1 focus:ring-neon-pink outline-none transition-all uppercase placeholder-gray-500"
-                placeholder="CALL SIGN"
+                placeholder="NICKNAME"
                 required
               />
             </div>
@@ -232,7 +234,7 @@ export function PlayerView() {
 
       <div className="flex-1 flex flex-col justify-center p-4">
         {gameState === 'LOBBY' && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             className="text-center"
@@ -245,11 +247,25 @@ export function PlayerView() {
           </motion.div>
         )}
 
+        {gameState === 'TOPIC_REVEAL' && question?.topic && (
+          <TopicRevealScreen topic={question.topic} />
+        )}
+
         {gameState === 'QUESTION_ACTIVE' && question && answerFeedback === null && (
           <div className="flex-1 flex flex-col justify-center max-w-2xl mx-auto w-full h-full">
             <div className="flex justify-center mb-4">
               <CountdownTimer startTime={questionStartTime} timeLimit={question.timeLimit} />
             </div>
+            {question.topic && (() => {
+              const meta = TOPIC_META[question.topic as TopicKey];
+              return (
+                <div className="flex justify-center mb-2">
+                  <span className={`px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest border ${meta?.bg ?? ''} ${meta?.color ?? ''}`}>
+                    {meta?.label}
+                  </span>
+                </div>
+              );
+            })()}
             <h3 className="text-center text-gray-400 font-bold mb-8 tracking-widest">SELECT YOUR ANSWER</h3>
             <div className="grid grid-cols-2 gap-4 h-[60vh]">
               {question.options.map((_, i) => (

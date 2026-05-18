@@ -95,7 +95,7 @@ quizRouter.post('/:id/duplicate', async (req: AuthRequest, res) => {
 });
 
 quizRouter.post('/:id/questions', async (req: AuthRequest, res) => {
-  const { text, options, correct_index, time_limit_sec, point_multiplier, order_index } = req.body;
+  const { text, options, correct_index, time_limit_sec, point_multiplier, order_index, topic } = req.body;
   if (!options || correct_index === undefined) {
     res.status(400).json({ error: 'options and correct_index required' }); return;
   }
@@ -109,6 +109,7 @@ quizRouter.post('/:id/questions', async (req: AuthRequest, res) => {
       time_limit_sec: time_limit_sec || 20,
       point_multiplier: point_multiplier || 1,
       order_index: order_index ?? 0,
+      topic: topic ?? null,
     })
     .select()
     .single();
@@ -130,7 +131,7 @@ quizRouter.put('/:id/questions/reorder', async (req: AuthRequest, res) => {
 });
 
 quizRouter.patch('/questions/:qid', async (req: AuthRequest, res) => {
-  const allowed = ['text', 'options', 'correct_index', 'time_limit_sec', 'point_multiplier', 'image_url'];
+  const allowed = ['text', 'options', 'correct_index', 'time_limit_sec', 'point_multiplier', 'image_url', 'topic'];
   const updates: Record<string, unknown> = {};
   for (const key of allowed) {
     if (req.body[key] !== undefined) updates[key] = req.body[key];

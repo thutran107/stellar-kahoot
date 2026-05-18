@@ -3,6 +3,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { GripVertical, Trash2, ChevronDown, ChevronUp, Check, ImageIcon, X, Loader2 } from 'lucide-react';
 import { useState, useRef } from 'react';
 import { apiFetch, apiFetchFormData } from '../../lib/api';
+import { TOPICS, TopicKey, TOPIC_META } from '../../lib/topics';
 
 export interface QuestionData {
   id: string;
@@ -13,6 +14,7 @@ export interface QuestionData {
   point_multiplier: 1 | 2;
   order_index: number;
   image_url?: string | null;
+  topic?: string | null;
 }
 
 interface Props {
@@ -123,6 +125,9 @@ export function QuestionCard({ question, index, onUpdate, onDelete }: Props) {
           <p className="text-xs text-gray-500 mt-0.5 flex items-center gap-1">
             {question.time_limit_sec}s · {question.point_multiplier}× pts · {question.options.filter(Boolean).length} options
             {question.image_url && <><span>·</span><ImageIcon className="w-3 h-3 text-neon-blue" /></>}
+            {question.topic && (
+              <><span>·</span><span className={TOPIC_META[question.topic as TopicKey]?.color}>{TOPIC_META[question.topic as TopicKey]?.label}</span></>
+            )}
           </p>
         </div>
         <button onClick={() => setExpanded((e) => !e)} className="p-2 glass rounded-xl hover:bg-white/10">
@@ -255,6 +260,23 @@ export function QuestionCard({ question, index, onUpdate, onDelete }: Props) {
                   </button>
                 ))}
               </div>
+            </div>
+          </div>
+
+          <div>
+            <label className="text-xs text-gray-400 block mb-2 uppercase tracking-widest">Topic</label>
+            <div className="flex flex-wrap gap-2">
+              {TOPICS.map((t) => (
+                <button
+                  key={t}
+                  onClick={() => onUpdate(question.id, { topic: question.topic === t ? null : t })}
+                  className={`px-3 py-1 rounded-lg text-sm font-bold transition-colors ${
+                    question.topic === t ? 'bg-neon-blue text-black' : 'glass hover:bg-white/10'
+                  }`}
+                >
+                  {TOPIC_META[t].label}
+                </button>
+              ))}
             </div>
           </div>
         </div>
