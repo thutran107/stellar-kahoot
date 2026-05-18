@@ -74,6 +74,7 @@ export function HostView() {
           timeLimit: q.time_limit_sec * 1000,
           pointMultiplier: q.point_multiplier,
           imageUrl: q.image_url ?? undefined,
+          topic: q.topic ?? null,
         }));
         setPendingQuestions(qs);
         setLoadingQuiz(false);
@@ -223,8 +224,8 @@ export function HostView() {
             const meta = TOPIC_META[question.topic as TopicKey];
             return (
               <div className="flex justify-center mb-3">
-                <span className={`px-4 py-1 rounded-full text-sm font-bold uppercase tracking-widest border ${meta.bg} ${meta.color}`}>
-                  {meta.label}
+                <span className={`px-4 py-1 rounded-full text-sm font-bold uppercase tracking-widest border ${meta?.bg ?? ''} ${meta?.color ?? ''}`}>
+                  {meta?.label}
                 </span>
               </div>
             );

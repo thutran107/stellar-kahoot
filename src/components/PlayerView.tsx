@@ -260,8 +260,8 @@ export function PlayerView() {
               const meta = TOPIC_META[question.topic as TopicKey];
               return (
                 <div className="flex justify-center mb-2">
-                  <span className={`px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest border ${meta.bg} ${meta.color}`}>
-                    {meta.label}
+                  <span className={`px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest border ${meta?.bg ?? ''} ${meta?.color ?? ''}`}>
+                    {meta?.label}
                   </span>
                 </div>
               );
