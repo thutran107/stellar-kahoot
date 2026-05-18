@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { io, Socket } from 'socket.io-client';
 
-export type GameState = 'LOBBY' | 'QUESTION_ACTIVE' | 'QUESTION_RESULTS' | 'FINAL_LEADERBOARD';
+export type GameState = 'LOBBY' | 'TOPIC_REVEAL' | 'QUESTION_ACTIVE' | 'QUESTION_RESULTS' | 'FINAL_LEADERBOARD';
 
 export interface Player {
   id: string;
@@ -22,6 +22,7 @@ export interface Question {
   timeLimit: number;
   pointMultiplier?: number;
   imageUrl?: string;
+  topic?: string | null;
 }
 
 interface GameStore {

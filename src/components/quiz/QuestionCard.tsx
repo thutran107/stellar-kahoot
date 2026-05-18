@@ -13,6 +13,7 @@ export interface QuestionData {
   point_multiplier: 1 | 2;
   order_index: number;
   image_url?: string | null;
+  topic?: string | null;
 }
 
 interface Props {
