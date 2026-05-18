@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Users, Play, SkipForward, Trophy } from 'lucide-react';
 import { useGameStore, Question } from '../store';
 import { apiFetch } from '../lib/api';
+import { CountdownTimer } from './CountdownTimer';
 
 function TimerBar({ startTime, timeLimit }: { startTime: number, timeLimit: number }) {
   const [progress, setProgress] = useState(100);
@@ -29,7 +30,7 @@ function TimerBar({ startTime, timeLimit }: { startTime: number, timeLimit: numb
   }, [startTime, timeLimit]);
 
   return (
-    <div className="w-full bg-white/5 h-2 absolute top-0 left-0 z-50">
+    <div className="timer-bar w-full bg-white/5 h-2 absolute top-0 left-0 z-50">
       <div 
         className="h-full"
         style={{ 
@@ -48,6 +49,7 @@ export function HostView() {
   const quizId = searchParams.get('quizId');
   const [loadingQuiz, setLoadingQuiz] = useState(!!quizId);
   const [pendingQuestions, setPendingQuestions] = useState<Question[] | null>(null);
+  const [bigScreen, setBigScreen] = useState(false);
 
   const {
     socket, gamePin, gameState, players, question, currentQuestionIndex,
@@ -100,10 +102,11 @@ export function HostView() {
     );
   }
 
-  const joinUrl = `${window.location.origin}/join?pin=${gamePin}`;
+  const publicBase = import.meta.env.VITE_PUBLIC_URL?.replace(/\/$/, '') || window.location.origin;
+  const joinUrl = `${publicBase}/join?pin=${gamePin}`;
 
   return (
-    <div className="min-h-screen flex flex-col p-4 md:p-8 relative">
+    <div className={`min-h-screen flex flex-col p-4 md:p-8 relative${bigScreen ? ' big-screen' : ''}`}>
       {gameState === 'QUESTION_ACTIVE' && question && (
         <TimerBar startTime={questionStartTime} timeLimit={question.timeLimit} />
       )}
@@ -131,17 +134,30 @@ export function HostView() {
           <div className="mt-8 w-full">
             <div className="flex items-center justify-between mb-6 pb-4">
               <h3 className="text-3xl font-bold flex items-center gap-3">
-                <Users className="text-neon-pink" /> 
+                <Users className="text-neon-pink" />
                 Crew Members <span className="text-neon-pink">({players.length})</span>
               </h3>
-              
-              <button 
-                onClick={startGame}
-                disabled={players.length === 0}
-                className="py-3 px-8 text-white font-bold rounded-xl text-lg flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed btn-funky"
-              >
-                <Play className="w-5 h-5" /> Launch Mission
-              </button>
+
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={() => setBigScreen(b => !b)}
+                  className={`py-2 px-5 rounded-xl text-sm font-mono uppercase tracking-widest border transition-colors ${
+                    bigScreen
+                      ? 'border-neon-blue text-neon-blue bg-neon-blue/10'
+                      : 'border-white/20 text-gray-400 hover:border-white/40'
+                  }`}
+                >
+                  {bigScreen ? 'Exit Big Screen' : 'Big Screen Mode'}
+                </button>
+
+                <button
+                  onClick={startGame}
+                  disabled={players.length === 0}
+                  className="py-3 px-8 text-white font-bold rounded-xl text-lg flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed btn-funky"
+                >
+                  <Play className="w-5 h-5" /> Launch Mission
+                </button>
+              </div>
             </div>
             
             <div className="flex flex-wrap gap-4">
@@ -174,11 +190,14 @@ export function HostView() {
 
       {gameState === 'QUESTION_ACTIVE' && question && (
         <div className="flex-1 flex flex-col max-w-6xl mx-auto w-full pt-12">
-          <div className="flex justify-between items-center mb-12">
-            <div className="text-2xl font-mono text-gray-400">
+          <div className="flex items-center mb-12">
+            <div className="player-status flex-1 text-2xl font-mono text-gray-400">
               Question {currentQuestionIndex + 1} <span className="text-gray-600">/ {totalQuestions}</span>
             </div>
-            <div className="text-2xl font-mono flex items-center gap-2 text-neon-blue bg-neon-blue/10 px-4 py-2 rounded-lg border border-neon-blue/30">
+            <div className="flex-1 flex justify-center">
+              <CountdownTimer startTime={questionStartTime} timeLimit={question.timeLimit} />
+            </div>
+            <div className="player-status flex-1 flex justify-end text-2xl font-mono items-center gap-2 text-neon-blue bg-neon-blue/10 px-4 py-2 rounded-lg border border-neon-blue/30">
               <Users className="w-5 h-5" />
               {players.filter(p => p.hasAnswered).length} / {players.length} Answers
             </div>
@@ -194,13 +213,13 @@ export function HostView() {
               />
             </div>
           )}
-          <h2 className="text-5xl md:text-6xl font-light italic text-center mb-16 leading-tight">
+          <h2 className="question-text text-5xl md:text-6xl font-light italic text-center mb-16 leading-tight">
             {question.text}
           </h2>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-auto mb-12">
             {question.options.map((opt, i) => (
-              <div key={i} className={`glass p-8 rounded-[2rem] text-2xl text-center font-bold relative overflow-hidden focus:outline-none transition-transform hover:scale-[1.02] 
+              <div key={i} className={`answer-option glass p-8 rounded-[2rem] text-2xl text-center font-bold relative overflow-hidden focus:outline-none transition-transform hover:scale-[1.02]
                 ${i === 0 ? 'border-l-4 border-l-red-500 hover:shadow-[0_0_15px_rgba(239,68,68,0.2)]' : ''}
                 ${i === 1 ? 'border-l-4 border-l-blue-500 hover:shadow-[0_0_15px_rgba(59,130,246,0.2)]' : ''}
                 ${i === 2 ? 'border-l-4 border-l-yellow-500 hover:shadow-[0_0_15px_rgba(234,179,8,0.2)]' : ''}
@@ -261,7 +280,7 @@ export function HostView() {
                             CORRECT ORBIT
                           </span>
                         )}
-                        <span className="font-mono text-lg">
+                        <span className="vote-count font-mono text-lg">
                           {count}{total > 0 ? ` (${pct}%)` : ''}
                         </span>
                       </div>
@@ -321,7 +340,7 @@ export function HostView() {
                   </div>
                   <span className="text-xl font-bold">{p.name}</span>
                 </div>
-                <span className="font-mono text-neon-blue font-bold">{p.score} pts</span>
+                <span className="led-digit leaderboard-score font-mono text-neon-blue font-bold">{p.score} pts</span>
               </div>
             ))}
           </div>
@@ -368,7 +387,7 @@ function LeaderboardPodium({ player, rank, height, color, bgColor }: { player: a
           {player.avatar}
         </div>
         <span className="text-xl font-bold text-white truncate w-full text-center px-2 drop-shadow-md z-10">{player.name}</span>
-        <span className="font-mono text-sm mt-1 bg-black/50 px-2 py-0.5 rounded text-gray-300 z-10">{player.score}</span>
+        <span className="led-digit leaderboard-score font-mono text-sm mt-1 bg-black/50 px-2 py-0.5 rounded text-gray-300 z-10">{player.score}</span>
       </div>
       <span className="text-4xl font-black opacity-30">{rank}</span>
     </motion.div>

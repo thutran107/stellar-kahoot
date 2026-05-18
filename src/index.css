@@ -47,3 +47,43 @@ body {
 .btn-funky:active {
   transform: scale(0.98);
 }
+
+/* Big Screen Mode — all rules scoped to .big-screen on the HostView root */
+
+.big-screen .question-text {
+  font-size: 5vw;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+}
+
+.big-screen .answer-option {
+  font-size: 2.5vw;
+}
+
+.big-screen .player-status {
+  font-size: 1.5vw;
+}
+
+.big-screen .vote-count {
+  font-size: 2vw;
+}
+
+.big-screen .led-digit {
+  font-family: 'JetBrains Mono', 'Courier New', Courier, monospace;
+  text-shadow:
+    0 0 7px currentColor,
+    0 0 10px currentColor,
+    0 0 21px currentColor,
+    0 0 42px currentColor;
+}
+
+.big-screen .countdown-digit {
+  font-size: 8vw;
+}
+
+.big-screen .leaderboard-score {
+  font-size: 3vw;
+}
+
+.big-screen .timer-bar {
+  height: 1vh;
+}
