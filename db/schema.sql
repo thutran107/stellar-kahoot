@@ -23,7 +23,8 @@ create table if not exists questions (
   correct_index    integer not null check (correct_index between 0 and 3),
   time_limit_sec   integer not null default 20 check (time_limit_sec in (10, 20, 30)),
   point_multiplier integer not null default 1 check (point_multiplier in (1, 2)),
-  order_index      integer not null default 0
+  order_index      integer not null default 0,
+  topic            text check (topic in ('maths', 'riddles', 'idioms', 'rearrange_letters', 'general'))
 );
 alter table questions enable row level security;
 create policy "host owns question" on questions
