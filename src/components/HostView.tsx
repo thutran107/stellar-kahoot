@@ -235,13 +235,13 @@ export function HostView() {
 
           <div className="flex-1 grid grid-cols-1 md:grid-cols-2 grid-rows-4 md:grid-rows-2 gap-3 min-h-0">
             {question.options.map((opt, i) => (
-              <div key={i} className={`answer-option glass rounded-[2rem] text-xl text-center font-bold relative overflow-hidden focus:outline-none transition-transform hover:scale-[1.02] flex items-center justify-center px-14 py-4
+              <div key={i} className={`answer-option glass rounded-[2rem] text-2xl md:text-3xl text-center font-bold relative overflow-hidden focus:outline-none transition-transform hover:scale-[1.02] flex items-center justify-center px-16 py-4
                 ${i === 0 ? 'border-l-4 border-l-red-500 hover:shadow-[0_0_15px_rgba(239,68,68,0.2)]' : ''}
                 ${i === 1 ? 'border-l-4 border-l-blue-500 hover:shadow-[0_0_15px_rgba(59,130,246,0.2)]' : ''}
                 ${i === 2 ? 'border-l-4 border-l-yellow-500 hover:shadow-[0_0_15px_rgba(234,179,8,0.2)]' : ''}
                 ${i === 3 ? 'border-l-4 border-l-green-500 hover:shadow-[0_0_15px_rgba(34,197,94,0.2)]' : ''}
               `}>
-                <div className={`absolute left-4 top-1/2 -translate-y-1/2 font-black text-xl rounded-lg w-10 h-10 flex items-center justify-center shrink-0
+                <div className={`absolute left-4 top-1/2 -translate-y-1/2 font-black text-2xl rounded-lg w-12 h-12 flex items-center justify-center shrink-0
                    ${i === 0 ? 'bg-red-500 text-white' : ''}
                    ${i === 1 ? 'bg-blue-500 text-white' : ''}
                    ${i === 2 ? 'bg-yellow-500 text-white' : ''}
