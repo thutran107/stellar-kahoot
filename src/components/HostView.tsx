@@ -196,8 +196,8 @@ export function HostView() {
       )}
 
       {gameState === 'QUESTION_ACTIVE' && question && (
-        <div className="flex-1 flex flex-col max-w-6xl mx-auto w-full pt-4">
-          <div className="flex items-center mb-4">
+        <div className="flex-1 flex flex-col max-w-6xl mx-auto w-full pt-4 min-h-0">
+          <div className="flex items-center mb-3 shrink-0">
             <div className="player-status flex-1 text-2xl font-mono text-gray-400">
               Question {currentQuestionIndex + 1} <span className="text-gray-600">/ {totalQuestions}</span>
             </div>
@@ -209,40 +209,39 @@ export function HostView() {
               {players.filter(p => p.hasAnswered).length} / {players.length} Answers
             </div>
           </div>
-          
+
           {question.imageUrl && (
-            <div className="w-full rounded-2xl overflow-hidden mb-3 bg-black/30 flex items-center justify-center" style={{ maxHeight: '20vh' }}>
+            <div className="w-full rounded-2xl overflow-hidden mb-3 bg-black/30 flex items-center justify-center shrink-0" style={{ height: '28vh' }}>
               <img
                 src={question.imageUrl}
                 alt=""
-                className="object-contain"
-                style={{ maxHeight: '20vh', maxWidth: '100%' }}
+                className="h-full w-full object-contain"
               />
             </div>
           )}
           {question.topic && (() => {
             const meta = TOPIC_META[question.topic as TopicKey];
             return (
-              <div className="flex justify-center mb-3">
+              <div className="flex justify-center mb-2 shrink-0">
                 <span className={`px-4 py-1 rounded-full text-sm font-bold uppercase tracking-widest border ${meta?.bg ?? ''} ${meta?.color ?? ''}`}>
                   {meta?.label}
                 </span>
               </div>
             );
           })()}
-          <h2 className="question-text text-4xl md:text-5xl font-light italic text-center mb-4 leading-tight">
+          <h2 className="question-text text-4xl md:text-5xl font-light italic text-center mb-3 leading-tight shrink-0">
             {question.text}
           </h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-20">
+          <div className="flex-1 grid grid-cols-1 md:grid-cols-2 grid-rows-4 md:grid-rows-2 gap-3 min-h-0">
             {question.options.map((opt, i) => (
-              <div key={i} className={`answer-option glass p-5 rounded-[2rem] text-xl text-center font-bold relative overflow-hidden focus:outline-none transition-transform hover:scale-[1.02]
+              <div key={i} className={`answer-option glass rounded-[2rem] text-xl text-center font-bold relative overflow-hidden focus:outline-none transition-transform hover:scale-[1.02] flex items-center justify-center px-14 py-4
                 ${i === 0 ? 'border-l-4 border-l-red-500 hover:shadow-[0_0_15px_rgba(239,68,68,0.2)]' : ''}
                 ${i === 1 ? 'border-l-4 border-l-blue-500 hover:shadow-[0_0_15px_rgba(59,130,246,0.2)]' : ''}
                 ${i === 2 ? 'border-l-4 border-l-yellow-500 hover:shadow-[0_0_15px_rgba(234,179,8,0.2)]' : ''}
                 ${i === 3 ? 'border-l-4 border-l-green-500 hover:shadow-[0_0_15px_rgba(34,197,94,0.2)]' : ''}
               `}>
-                <div className={`absolute left-4 top-1/2 -translate-y-1/2 font-black text-xl rounded-lg w-10 h-10 flex items-center justify-center
+                <div className={`absolute left-4 top-1/2 -translate-y-1/2 font-black text-xl rounded-lg w-10 h-10 flex items-center justify-center shrink-0
                    ${i === 0 ? 'bg-red-500 text-white' : ''}
                    ${i === 1 ? 'bg-blue-500 text-white' : ''}
                    ${i === 2 ? 'bg-yellow-500 text-white' : ''}
@@ -255,10 +254,10 @@ export function HostView() {
             ))}
           </div>
 
-          <div className="flex justify-end gap-4 p-4 glass fixed bottom-8 right-8 z-10 rounded-3xl">
-             <button 
+          <div className="flex justify-end gap-4 py-3 shrink-0">
+            <button
               onClick={showResults}
-              className="py-4 px-8 text-white font-black rounded-[2rem] text-lg flex items-center gap-2 uppercase tracking-tighter btn-funky"
+              className="py-3 px-7 text-white font-black rounded-[2rem] text-lg flex items-center gap-2 uppercase tracking-tighter btn-funky"
             >
               <SkipForward className="w-5 h-5" /> End Early
             </button>
