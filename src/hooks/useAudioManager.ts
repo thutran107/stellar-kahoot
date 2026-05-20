@@ -9,6 +9,7 @@ export function useAudioManager() {
 
   const prevStateRef = useRef<GameState>('LOBBY');
   const urgentTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const correctTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const prev = prevStateRef.current;
@@ -26,9 +27,18 @@ export function useAudioManager() {
     }
 
     if (gameState === 'QUESTION_ACTIVE') {
+      if (urgentTimerRef.current) {
+        clearTimeout(urgentTimerRef.current);
+        urgentTimerRef.current = null;
+      }
+      if (correctTimerRef.current) {
+        clearTimeout(correctTimerRef.current);
+        correctTimerRef.current = null;
+      }
       if (prev === 'TOPIC_REVEAL') {
         crossfade('ambient', 'countdown');
       } else {
+        stopAll();
         fadeIn('countdown');
       }
 
@@ -47,7 +57,7 @@ export function useAudioManager() {
       if (urgentTimerRef.current) clearTimeout(urgentTimerRef.current);
       stopAll();
       play('timesup');
-      setTimeout(() => play('correct'), 1000);
+      correctTimerRef.current = setTimeout(() => play('correct'), 1000);
       return;
     }
 
@@ -61,6 +71,7 @@ export function useAudioManager() {
   useEffect(() => {
     return () => {
       if (urgentTimerRef.current) clearTimeout(urgentTimerRef.current);
+      if (correctTimerRef.current) clearTimeout(correctTimerRef.current);
     };
   }, []);
 }
