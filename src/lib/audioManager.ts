@@ -23,8 +23,9 @@ export function fadeIn(key: SoundKey, duration = FADE_MS) {
 
 export function fadeOut(key: SoundKey, duration = FADE_MS) {
   const sound = sounds[key];
+  const id = (sound as any)._sounds?.[0]?._id as number | undefined;
   sound.fade(sound.volume(), 0, duration);
-  setTimeout(() => sound.stop(), duration + 50);
+  setTimeout(() => (id !== undefined ? sound.stop(id) : sound.stop()), duration + 50);
 }
 
 export function crossfade(from: SoundKey, to: SoundKey, duration = FADE_MS) {
@@ -42,12 +43,13 @@ export function play(key: SoundKey, onend?: () => void) {
 export function stopAll(duration = 100) {
   Object.values(sounds).forEach(sound => {
     if (sound.playing()) {
+      const id = (sound as any)._sounds?.[0]?._id as number | undefined;
       sound.fade(sound.volume(), 0, duration);
-      setTimeout(() => sound.stop(), duration + 50);
+      setTimeout(() => (id !== undefined ? sound.stop(id) : sound.stop()), duration + 50);
     }
   });
 }
 
 export function setGlobalMute(muted: boolean) {
-  Howler.volume(muted ? 0 : 1);
+  Howler.mute(muted);
 }
