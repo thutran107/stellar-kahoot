@@ -112,10 +112,11 @@ export function PlayerView() {
   
   const [pinInput, setPinInput] = useState(pinParam || '');
   const [nameInput, setNameInput] = useState('');
-  
+
   const COSMIC_AVATARS = ['🪐', '🌍', '🌎', '🌏', '🌕', '🌑', '☄️', '💫', '🌟', '🌌'];
   const [selectedAvatar, setSelectedAvatar] = useState(COSMIC_AVATARS[0]);
-  
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+
   const {
     gamePin, gameState, joinGame, playerName, error, connect,
     question, currentQuestionIndex, submitAnswer, answerFeedback,
@@ -123,6 +124,13 @@ export function PlayerView() {
   } = useGameStore();
 
   useEffect(() => { connect(); }, [connect]);
+  useEffect(() => { setSelectedIndex(null); }, [questionStartTime]);
+
+  const handleSelectAnswer = (i: number) => {
+    if (selectedIndex !== null) return;
+    setSelectedIndex(i);
+    submitAnswer(i);
+  };
 
   const handleJoin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -268,28 +276,55 @@ export function PlayerView() {
             })()}
             <h3 className="text-center text-gray-400 font-bold mb-8 tracking-widest">SELECT YOUR ANSWER</h3>
             <div className="grid grid-cols-2 gap-4 h-[60vh]">
-              {question.options.map((_, i) => (
-                <motion.button
-                  whileTap={{ scale: 0.95 }}
-                  key={i}
-                  onClick={() => submitAnswer(i)}
-                  className={`rounded-[2rem] glass flex items-center justify-center border-b-4 hover:brightness-110 active:border-b-0 active:translate-y-1 transition-all
-                    ${i === 0 ? 'bg-red-500/20 border-red-500 hover:bg-red-500/30 shadow-[0_0_15px_rgba(239,68,68,0.2)]' : ''}
-                    ${i === 1 ? 'bg-blue-500/20 border-blue-500 hover:bg-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.2)]' : ''}
-                    ${i === 2 ? 'bg-yellow-500/20 border-yellow-500 hover:bg-yellow-500/30 shadow-[0_0_15px_rgba(234,179,8,0.2)]' : ''}
-                    ${i === 3 ? 'bg-green-500/20 border-green-500 hover:bg-green-500/30 shadow-[0_0_15px_rgba(34,197,94,0.2)]' : ''}
-                  `}
-                >
-                  <div className={`w-16 h-16 rounded-full flex items-center justify-center border-2
-                    ${i === 0 ? 'border-red-500 bg-red-900/50 text-white' : ''}
-                    ${i === 1 ? 'border-blue-500 bg-blue-900/50 text-white' : ''}
-                    ${i === 2 ? 'border-yellow-500 bg-yellow-900/50 text-white' : ''}
-                    ${i === 3 ? 'border-green-500 bg-green-900/50 text-white' : ''}
-                  `}>
-                     <span className="font-black text-xl">{i + 1}</span>
-                  </div>
-                </motion.button>
-              ))}
+              {question.options.map((_, i) => {
+                const isSelected = selectedIndex === i;
+                const isDimmed = selectedIndex !== null && !isSelected;
+                const colors = [
+                  { idle: 'bg-red-500/20 border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.2)]',    active: 'bg-red-500/70 shadow-[0_0_32px_rgba(239,68,68,0.65),0_0_60px_rgba(239,68,68,0.3)]',    badge: 'border-red-500 bg-red-900/50' },
+                  { idle: 'bg-blue-500/20 border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.2)]',  active: 'bg-blue-500/70 shadow-[0_0_32px_rgba(59,130,246,0.65),0_0_60px_rgba(59,130,246,0.3)]',  badge: 'border-blue-500 bg-blue-900/50' },
+                  { idle: 'bg-yellow-500/20 border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.2)]', active: 'bg-yellow-500/70 shadow-[0_0_32px_rgba(234,179,8,0.65),0_0_60px_rgba(234,179,8,0.3)]', badge: 'border-yellow-500 bg-yellow-900/50' },
+                  { idle: 'bg-green-500/20 border-green-500 shadow-[0_0_15px_rgba(34,197,94,0.2)]',  active: 'bg-green-500/70 shadow-[0_0_32px_rgba(34,197,94,0.65),0_0_60px_rgba(34,197,94,0.3)]',  badge: 'border-green-500 bg-green-900/50' },
+                ][i];
+                return (
+                  <motion.button
+                    key={i}
+                    onClick={() => handleSelectAnswer(i)}
+                    disabled={selectedIndex !== null}
+                    animate={{
+                      scale: isSelected ? 1.04 : isDimmed ? 0.95 : 1,
+                      opacity: isDimmed ? 0.32 : 1,
+                    }}
+                    transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                    className={`rounded-[2rem] glass relative overflow-hidden flex items-center justify-center transition-colors
+                      ${isSelected ? `${colors.active} border-0 translate-y-0.5` : `${colors.idle} border-b-4 ${selectedIndex === null ? 'hover:brightness-110' : ''}`}
+                      ${isDimmed ? 'brightness-50' : ''}
+                    `}
+                  >
+                    {isSelected && (
+                      <motion.div
+                        className="absolute inset-0 pointer-events-none z-10"
+                        initial={{ x: '-100%' }}
+                        animate={{ x: '110%' }}
+                        transition={{ duration: 0.5, ease: 'easeOut' }}
+                        style={{ background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.35) 50%, transparent 100%)' }}
+                      />
+                    )}
+                    <div className={`w-16 h-16 rounded-full flex items-center justify-center border-2 relative z-10 text-white ${colors.badge}`}>
+                      <span className="font-black text-xl">{i + 1}</span>
+                    </div>
+                    {isSelected && (
+                      <motion.span
+                        className="absolute bottom-3 right-4 text-white/90 text-[10px] font-bold tracking-widest uppercase z-10"
+                        initial={{ opacity: 0, y: 6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.15, duration: 0.25 }}
+                      >
+                        ✓ LOCKED
+                      </motion.span>
+                    )}
+                  </motion.button>
+                );
+              })}
             </div>
             <PlayerProgressBar startTime={questionStartTime} timeLimit={question.timeLimit} />
           </div>
