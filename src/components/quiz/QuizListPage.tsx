@@ -168,7 +168,7 @@ export function QuizListPage() {
                     >
                       <Link className="w-4 h-4 text-neon-green" />
                       {copiedId === quiz.id && (
-                        <span className="absolute -top-8 left-1/2 -translate-x-1/2 text-xs bg-black/80 text-neon-green px-2 py-1 rounded whitespace-nowrap">
+                        <span className="absolute -top-8 left-1/2 -translate-x-1/2 text-xs bg-black/80 text-neon-green px-2 py-1 rounded whitespace-nowrap z-10">
                           Copied!
                         </span>
                       )}
