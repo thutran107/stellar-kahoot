@@ -99,6 +99,7 @@ describe('Quiz API', () => {
 
   it('GET /api/quizzes/:id/public does not expose host_id', async () => {
     const { supabaseAdmin } = await import('../lib/supabase.js');
+    vi.resetModules();
     let callCount = 0;
     (supabaseAdmin.from as ReturnType<typeof vi.fn>).mockImplementation(() => {
       callCount++;
@@ -107,7 +108,8 @@ describe('Quiz API', () => {
           select: vi.fn().mockReturnThis(),
           eq: vi.fn().mockReturnThis(),
           single: vi.fn().mockResolvedValue({
-            data: { id: 'quiz-1', title: 'Space Quiz', description: null },
+            // host_id is deliberately included in the mock return to prove the endpoint strips it
+            data: { id: 'quiz-1', title: 'Space Quiz', description: null, host_id: 'owner-user-id' },
             error: null,
           }),
         };

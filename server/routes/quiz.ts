@@ -13,13 +13,14 @@ quizRouter.get('/:id/public', async (req, res) => {
     .single();
   if (error || !quiz) { res.status(404).json({ error: 'Not found' }); return; }
 
-  const { data: questions } = await supabaseAdmin
+  const { data: questions, error: questionsError } = await supabaseAdmin
     .from('questions')
     .select('id, text, options, correct_index, time_limit_sec, point_multiplier, image_url, topic, order_index')
     .eq('quiz_id', req.params.id)
     .order('order_index');
+  if (questionsError) { res.status(500).json({ error: 'Failed to load questions' }); return; }
 
-  res.json({ ...quiz, questions: questions || [] });
+  res.json({ id: quiz.id, title: quiz.title, description: quiz.description, questions: questions || [] });
 });
 
 quizRouter.use(requireAuth);
