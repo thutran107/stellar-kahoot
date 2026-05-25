@@ -475,7 +475,7 @@ function BreakdownTable({ players, totalQuestions }: { players: Player[], totalQ
                     </td>
                   );
                 })}
-                <td className="p-3 text-center text-gray-400">{correct}/{totalQuestions}</td>
+                <td className="p-3 text-center text-gray-400">{correct}/{history.length || totalQuestions}</td>
                 <td className="p-3 text-right font-black text-neon-blue">{p.score}</td>
               </tr>
             );
