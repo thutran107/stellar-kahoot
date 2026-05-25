@@ -125,3 +125,4 @@ Browsers block audio until a user gesture occurs. Howler handles the unlock auto
 
 - `correct.mp3` is a Mixkit preview file (96kbps). Acceptable for now; swap for full-quality WAV if audio fidelity becomes a concern.
 - Loop tracks (lobby, countdown, urgent, podium) are not perfectly seamless — Kenney loops have a natural loop point but Howler may introduce a small gap on repeat. If noticeable, use Howler's `sprite` feature to trim the loop point.
+
