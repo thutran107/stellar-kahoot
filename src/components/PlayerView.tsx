@@ -310,7 +310,7 @@ export function PlayerView() {
                       />
                     )}
                     <div className={`w-16 h-16 rounded-full flex items-center justify-center border-2 relative z-10 text-white ${colors.badge}`}>
-                      <span className="font-black text-xl">{i + 1}</span>
+                      <span className="font-black text-xl">{['A', 'B', 'C', 'D'][i]}</span>
                     </div>
                     {isSelected && (
                       <motion.span
