@@ -3,6 +3,25 @@ import { requireAuth, AuthRequest } from '../middleware/auth.js';
 import { supabaseAdmin } from '../lib/supabase.js';
 
 export const quizRouter = Router();
+
+quizRouter.get('/:id/public', async (req, res) => {
+  const { data: quiz, error } = await supabaseAdmin
+    .from('quizzes')
+    .select('id, title, description')
+    .eq('id', req.params.id)
+    .eq('is_ready', true)
+    .single();
+  if (error || !quiz) { res.status(404).json({ error: 'Not found' }); return; }
+
+  const { data: questions } = await supabaseAdmin
+    .from('questions')
+    .select('id, text, options, correct_index, time_limit_sec, point_multiplier, image_url, topic, order_index')
+    .eq('quiz_id', req.params.id)
+    .order('order_index');
+
+  res.json({ ...quiz, questions: questions || [] });
+});
+
 quizRouter.use(requireAuth);
 
 quizRouter.get('/', async (req: AuthRequest, res) => {

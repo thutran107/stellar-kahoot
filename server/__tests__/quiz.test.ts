@@ -47,4 +47,82 @@ describe('Quiz API', () => {
       .set('Authorization', 'Bearer valid-token');
     expect(res.status).toBe(200);
   });
+
+  it('GET /api/quizzes/:id/public returns 200 without token when quiz is ready', async () => {
+    const { supabaseAdmin } = await import('../lib/supabase.js');
+    let callCount = 0;
+    (supabaseAdmin.from as ReturnType<typeof vi.fn>).mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) {
+        // quizzes query
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          single: vi.fn().mockResolvedValue({
+            data: { id: 'quiz-1', title: 'Space Quiz', description: null },
+            error: null,
+          }),
+        };
+      }
+      // questions query
+      return {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        order: vi.fn().mockResolvedValue({ data: [], error: null }),
+      };
+    });
+    const { quizRouter } = await import('../routes/quiz.js');
+    const app = express();
+    app.use(express.json());
+    app.use('/api/quizzes', quizRouter);
+    const res = await request(app).get('/api/quizzes/quiz-1/public');
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('title', 'Space Quiz');
+    expect(res.body).toHaveProperty('questions');
+    expect(res.body).not.toHaveProperty('host_id');
+  });
+
+  it('GET /api/quizzes/:id/public returns 404 when quiz is draft (is_ready = false)', async () => {
+    const { supabaseAdmin } = await import('../lib/supabase.js');
+    (supabaseAdmin.from as ReturnType<typeof vi.fn>).mockReturnValue({
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({ data: null, error: { message: 'not found' } }),
+    });
+    const { quizRouter } = await import('../routes/quiz.js');
+    const app = express();
+    app.use(express.json());
+    app.use('/api/quizzes', quizRouter);
+    const res = await request(app).get('/api/quizzes/draft-quiz/public');
+    expect(res.status).toBe(404);
+  });
+
+  it('GET /api/quizzes/:id/public does not expose host_id', async () => {
+    const { supabaseAdmin } = await import('../lib/supabase.js');
+    let callCount = 0;
+    (supabaseAdmin.from as ReturnType<typeof vi.fn>).mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) {
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          single: vi.fn().mockResolvedValue({
+            data: { id: 'quiz-1', title: 'Space Quiz', description: null },
+            error: null,
+          }),
+        };
+      }
+      return {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        order: vi.fn().mockResolvedValue({ data: [], error: null }),
+      };
+    });
+    const { quizRouter } = await import('../routes/quiz.js');
+    const app = express();
+    app.use(express.json());
+    app.use('/api/quizzes', quizRouter);
+    const res = await request(app).get('/api/quizzes/quiz-1/public');
+    expect(res.body).not.toHaveProperty('host_id');
+  });
 });
