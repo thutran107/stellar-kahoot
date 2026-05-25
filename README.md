@@ -6,6 +6,10 @@
 
 A real-time multiplayer quiz game with a space theme — host a game, share a PIN, and let players compete from any device. Built in the style of Kahoot.
 
+<div align="center">
+<img width="800" alt="Home screen" src="docs/screenshots/home.png" />
+</div>
+
 ## Features
 
 - **Live multiplayer** — Socket.io keeps all players in sync in real time
@@ -14,6 +18,11 @@ A real-time multiplayer quiz game with a space theme — host a game, share a PI
 - **Vote stats** — per-option bar charts show how players voted after each question
 - **Results history** — browse past game sessions with final scores and per-question breakdowns
 - **Magic-link auth** — Supabase email auth, no passwords
+- **Public quiz hosting** — published quizzes can be hosted without signing in; share a direct host link from the quiz list
+- **Background music** — adaptive audio tracks that follow game state transitions (lobby → question → results → podium), with a mute toggle powered by Howler.js
+- **Player answer feedback** — answer options highlight with a selected state on tap, before results are revealed
+- **A/B/C/D labels** — consistent answer labels on both host and player views
+- **Leaderboard breakdown** — "Show Breakdown" toggle on the MISSION OVER screen replaces the podium with a per-question score grid for the top 5 players; cells color-coded by point tier (gold 1000 / cyan 800 / indigo 500 / missed)
 
 ## Stack
 
@@ -121,6 +130,16 @@ In Supabase → **SQL Editor**, run the contents of `db/migrations/001_rls_game_
 3. When a question appears, tap the answer option (A / B / C / D) before time runs out
 4. You get instant feedback — green if correct, red if wrong — and see how many points you earned
 5. The leaderboard updates after every question
+
+<div align="center">
+<img width="360" alt="Join screen" src="docs/screenshots/join.png" />
+&nbsp;&nbsp;
+<img width="360" alt="Answer results" src="docs/screenshots/demo-answer-results.png" />
+</div>
+
+<div align="center">
+<img width="360" alt="Final ranking" src="docs/screenshots/demo-final-podium.png" />
+</div>
 
 ## Scoring
 
