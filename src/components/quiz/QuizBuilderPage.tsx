@@ -244,6 +244,7 @@ export function QuizBuilderPage() {
         <motion.button
           whileTap={{ scale: 0.95 }}
           onClick={toggleReady}
+          title={quiz.is_ready ? 'Click to unpublish' : 'Publish this quiz'}
           className={`px-6 py-3 rounded-xl font-bold flex items-center gap-2 glass border shadow-xl ${
             quiz.is_ready
               ? 'border-neon-green text-neon-green'
@@ -251,7 +252,7 @@ export function QuizBuilderPage() {
           }`}
         >
           <CheckCircle className="w-5 h-5" />
-          {quiz.is_ready ? 'Marked Ready' : 'Mark as Ready'}
+          {quiz.is_ready ? 'Published' : 'Publish'}
         </motion.button>
       </div>
       {previewOpen && (

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Play, Edit2, Copy, Trash2, CheckCircle, Clock, LogOut, History } from 'lucide-react';
+import { Plus, Play, Edit2, Copy, Trash2, CheckCircle, Clock, LogOut, History, Link } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { apiFetch } from '../../lib/api';
 
@@ -20,6 +20,14 @@ export function QuizListPage() {
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [newTitle, setNewTitle] = useState('');
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  async function copyHostLink(id: string) {
+    const url = `${window.location.origin}/host?quizId=${id}`;
+    await navigator.clipboard.writeText(url);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
+  }
 
   useEffect(() => { load(); }, []);
 
@@ -152,6 +160,20 @@ export function QuizListPage() {
                   >
                     <Play className="w-4 h-4 text-white" />
                   </button>
+                  {quiz.is_ready && (
+                    <button
+                      onClick={() => copyHostLink(quiz.id)}
+                      className="p-2 glass rounded-xl hover:bg-white/10 relative"
+                      title="Copy host link"
+                    >
+                      <Link className="w-4 h-4 text-neon-green" />
+                      {copiedId === quiz.id && (
+                        <span className="absolute -top-8 left-1/2 -translate-x-1/2 text-xs bg-black/80 text-neon-green px-2 py-1 rounded whitespace-nowrap z-10">
+                          Copied!
+                        </span>
+                      )}
+                    </button>
+                  )}
                   <button
                     onClick={() => navigate(`/quizzes/${quiz.id}/edit`)}
                     className="p-2 glass rounded-xl hover:bg-white/10"

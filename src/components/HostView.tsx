@@ -4,7 +4,6 @@ import { QRCodeSVG } from 'qrcode.react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Users, Play, SkipForward, Trophy } from 'lucide-react';
 import { useGameStore, Question } from '../store';
-import { apiFetch } from '../lib/api';
 import { CountdownTimer } from './CountdownTimer';
 import { TopicRevealScreen } from './TopicReveal';
 import { TOPIC_META, TopicKey } from '../lib/topics';
@@ -63,7 +62,7 @@ export function HostView() {
 
   useEffect(() => {
     if (!quizId) return;
-    apiFetch(`/api/quizzes/${quizId}`)
+    fetch(`/api/quizzes/${quizId}/public`)
       .then((r) => r.json())
       .then((data) => {
         const qs: Question[] = (data.questions ?? []).map((q: any) => ({
