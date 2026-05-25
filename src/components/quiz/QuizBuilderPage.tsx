@@ -251,7 +251,7 @@ export function QuizBuilderPage() {
           }`}
         >
           <CheckCircle className="w-5 h-5" />
-          {quiz.is_ready ? 'Marked Ready' : 'Mark as Ready'}
+          {quiz.is_ready ? 'Published' : 'Publish'}
         </motion.button>
       </div>
       {previewOpen && (
