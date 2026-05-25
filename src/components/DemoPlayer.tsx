@@ -7,12 +7,12 @@ export function DemoPlayer() {
 
   useEffect(() => {
     // We create a sequence of timeouts to rotate through the different states of the Player View.
-    const mockPlayer = { id: 'test-1', name: 'COSMO', score: 1450, hasAnswered: false, lastAnswerTime: 0, color: '#f472b6', avatar: '🪐', lastPointsEarned: 0 };
+    const mockPlayer = { id: 'test-1', name: 'COSMO', score: 1450, hasAnswered: false, lastAnswerTime: 0, color: '#f472b6', avatar: '🪐', lastPointsEarned: 0, scoreHistory: [] };
     const otherPlayers = [
-        { id: 'test-4', name: 'NOVA', score: 1800, hasAnswered: true, lastAnswerTime: 0, color: '#fbbf24', avatar: '🌟', lastPointsEarned: 0 },
-        { id: 'test-2', name: 'RIVAL', score: 1200, hasAnswered: true, lastAnswerTime: 0, color: '#22d3ee', avatar: '☄️', lastPointsEarned: 0 },
-        { id: 'test-5', name: 'ASTRO', score: 850, hasAnswered: true, lastAnswerTime: 0, color: '#fb7185', avatar: '🌑', lastPointsEarned: 0 },
-        { id: 'test-3', name: 'ROOKIE', score: 400, hasAnswered: true, lastAnswerTime: 0, color: '#34d399', avatar: '🌍', lastPointsEarned: 0 }
+        { id: 'test-4', name: 'NOVA', score: 1800, hasAnswered: true, lastAnswerTime: 0, color: '#fbbf24', avatar: '🌟', lastPointsEarned: 0, scoreHistory: [] },
+        { id: 'test-2', name: 'RIVAL', score: 1200, hasAnswered: true, lastAnswerTime: 0, color: '#22d3ee', avatar: '☄️', lastPointsEarned: 0, scoreHistory: [] },
+        { id: 'test-5', name: 'ASTRO', score: 850, hasAnswered: true, lastAnswerTime: 0, color: '#fb7185', avatar: '🌑', lastPointsEarned: 0, scoreHistory: [] },
+        { id: 'test-3', name: 'ROOKIE', score: 400, hasAnswered: true, lastAnswerTime: 0, color: '#34d399', avatar: '🌍', lastPointsEarned: 0, scoreHistory: [] }
     ];
 
     let timer: NodeJS.Timeout;
