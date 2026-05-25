@@ -12,6 +12,7 @@ export interface Player {
   color: string;
   avatar: string;
   lastPointsEarned: number;
+  scoreHistory: number[];
 }
 
 export interface Question {

@@ -21,6 +21,7 @@ interface Player {
   color: string;
   avatar: string;
   lastPointsEarned: number;
+  scoreHistory: number[];
 }
 
 interface Question {
@@ -101,6 +102,11 @@ async function startServer() {
 
     Object.keys(session.players).forEach((pId) => {
       if (!session.players[pId].hasAnswered) session.players[pId].lastPointsEarned = 0;
+    });
+
+    // Record this question's points for every player
+    Object.keys(session.players).forEach((pId) => {
+      session.players[pId].scoreHistory.push(session.players[pId].lastPointsEarned);
     });
 
     session.state = "QUESTION_RESULTS";
@@ -300,6 +306,7 @@ async function startServer() {
         color: randomColor,
         avatar: finalAvatar,
         lastPointsEarned: 0,
+        scoreHistory: [],
       };
 
       socket.join(pin);
