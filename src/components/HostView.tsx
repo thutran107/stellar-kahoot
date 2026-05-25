@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Users, Play, SkipForward, Trophy } from 'lucide-react';
-import { useGameStore, Question } from '../store';
+import { useGameStore, Question, Player } from '../store';
 import { CountdownTimer } from './CountdownTimer';
 import { TopicRevealScreen } from './TopicReveal';
 import { TOPIC_META, TopicKey } from '../lib/topics';
@@ -51,6 +51,7 @@ export function HostView() {
   const [loadingQuiz, setLoadingQuiz] = useState(!!quizId);
   const [pendingQuestions, setPendingQuestions] = useState<Question[] | null>(null);
   const [bigScreen, setBigScreen] = useState(false);
+  const [showBreakdown, setShowBreakdown] = useState(false);
 
   const {
     socket, gamePin, gameState, players, question, currentQuestionIndex,
@@ -329,39 +330,55 @@ export function HostView() {
       {gameState === 'FINAL_LEADERBOARD' && (
         <div className="flex-1 flex flex-col max-w-4xl mx-auto w-full pt-12 overflow-y-auto">
           <TerminalHeader text="MISSION OVER" />
-          
-          <div className="mt-12 flex items-end justify-center gap-4 h-64 mb-16">
-            {players.length >= 2 && (
-              <LeaderboardPodium player={players[1]} rank={2} height={160} color="border-gray-400" bgColor="bg-gray-400/20" />
-            )}
-            {players.length >= 1 && (
-              <LeaderboardPodium player={players[0]} rank={1} height={220} color="border-yellow-400" bgColor="bg-yellow-400/20" />
-            )}
-            {players.length >= 3 && (
-              <LeaderboardPodium player={players[2]} rank={3} height={120} color="border-orange-600" bgColor="bg-orange-600/20" />
-            )}
-          </div>
 
-          <div className="space-y-4">
-            {players.slice(3).map((p, i) => (
-              <div key={p.id} className="glass p-4 rounded-xl flex items-center justify-between transition-transform hover:scale-[1.01]">
-                <div className="flex items-center gap-4">
-                  <span className="text-gray-500 font-mono w-8 text-right font-bold">{i + 4}</span>
-                  <div 
-                    className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 border border-white/20 text-xl"
-                    style={{ backgroundColor: p.color, boxShadow: `0 0 10px ${p.color}50` }}
-                  >
-                    {p.avatar}
-                  </div>
-                  <span className="text-xl font-bold">{p.name}</span>
-                </div>
-                <span className="led-digit leaderboard-score font-mono text-neon-blue font-bold">{p.score} pts</span>
+          {!showBreakdown && (
+            <>
+              <div className="mt-12 flex items-end justify-center gap-4 h-64 mb-16">
+                {players.length >= 2 && (
+                  <LeaderboardPodium player={players[1]} rank={2} height={160} color="border-gray-400" bgColor="bg-gray-400/20" />
+                )}
+                {players.length >= 1 && (
+                  <LeaderboardPodium player={players[0]} rank={1} height={220} color="border-yellow-400" bgColor="bg-yellow-400/20" />
+                )}
+                {players.length >= 3 && (
+                  <LeaderboardPodium player={players[2]} rank={3} height={120} color="border-orange-600" bgColor="bg-orange-600/20" />
+                )}
               </div>
-            ))}
-          </div>
 
-          <div className="mt-16 text-center">
-            <button 
+              <div className="space-y-4">
+                {players.slice(3).map((p, i) => (
+                  <div key={p.id} className="glass p-4 rounded-xl flex items-center justify-between transition-transform hover:scale-[1.01]">
+                    <div className="flex items-center gap-4">
+                      <span className="text-gray-500 font-mono w-8 text-right font-bold">{i + 4}</span>
+                      <div
+                        className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 border border-white/20 text-xl"
+                        style={{ backgroundColor: p.color, boxShadow: `0 0 10px ${p.color}50` }}
+                      >
+                        {p.avatar}
+                      </div>
+                      <span className="text-xl font-bold">{p.name}</span>
+                    </div>
+                    <span className="led-digit leaderboard-score font-mono text-neon-blue font-bold">{p.score} pts</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          {showBreakdown && (
+            <div className="mt-8">
+              <BreakdownTable players={players} totalQuestions={totalQuestions} />
+            </div>
+          )}
+
+          <div className="mt-16 flex justify-center gap-4">
+            <button
+              onClick={() => setShowBreakdown(b => !b)}
+              className="px-8 py-4 glass rounded-xl font-bold hover:bg-white/10 transition-colors uppercase tracking-widest text-sm text-gray-300"
+            >
+              {showBreakdown ? 'Hide Breakdown' : 'Show Breakdown'}
+            </button>
+            <button
               onClick={() => window.location.href = '/'}
               className="px-8 py-4 glass rounded-xl font-bold hover:bg-white/10 transition-colors uppercase tracking-widest text-sm text-gray-300"
             >
@@ -388,14 +405,14 @@ function TerminalHeader({ text }: { text: string }) {
 
 function LeaderboardPodium({ player, rank, height, color, bgColor }: { player: any, rank: number, height: number, color: string, bgColor: string }) {
   return (
-    <motion.div 
+    <motion.div
       initial={{ height: 0, opacity: 0 }}
       animate={{ height, opacity: 1 }}
       transition={{ duration: 1, delay: rank * 0.2 }}
       className={`w-32 flex flex-col items-center justify-end glass ${bgColor} border-t border-l border-r ${color} rounded-t-lg relative pb-4 backdrop-blur-md`}
     >
       <div className="absolute -top-16 flex flex-col items-center w-full">
-        <div 
+        <div
           className="w-12 h-12 rounded-full mb-1 flex items-center justify-center shrink-0 border border-white/20 z-10 text-2xl"
           style={{ backgroundColor: player.color, boxShadow: `0 0 15px ${player.color}80` }}
         >
@@ -406,5 +423,65 @@ function LeaderboardPodium({ player, rank, height, color, bgColor }: { player: a
       </div>
       <span className="text-4xl font-black opacity-30">{rank}</span>
     </motion.div>
+  );
+}
+
+function BreakdownTable({ players, totalQuestions }: { players: Player[], totalQuestions: number }) {
+  const top5 = players.slice(0, 5);
+  const qIndices = Array.from({ length: totalQuestions }, (_, i) => i);
+
+  return (
+    <div className="glass rounded-2xl overflow-x-auto">
+      <table className="w-full text-sm font-mono">
+        <thead>
+          <tr className="border-b border-white/10">
+            <th className="p-3 text-left text-gray-500 uppercase tracking-widest text-xs">#</th>
+            <th className="p-3 text-left text-gray-500 uppercase tracking-widest text-xs">Player</th>
+            {qIndices.map(i => (
+              <th key={i} className="p-3 text-center text-gray-500 uppercase tracking-widest text-xs">Q{i + 1}</th>
+            ))}
+            <th className="p-3 text-center text-gray-500 uppercase tracking-widest text-xs">✓</th>
+            <th className="p-3 text-right text-gray-500 uppercase tracking-widest text-xs">Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          {top5.map((p, idx) => {
+            const history = p.scoreHistory ?? [];
+            const correct = history.filter(pts => pts > 0).length;
+            return (
+              <tr key={p.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                <td className="p-3 text-gray-500 font-bold">{idx + 1}</td>
+                <td className="p-3">
+                  <div className="flex items-center gap-2">
+                    <div
+                      className="w-8 h-8 rounded-full flex items-center justify-center text-base shrink-0"
+                      style={{ backgroundColor: p.color, boxShadow: `0 0 8px ${p.color}50` }}
+                    >
+                      {p.avatar}
+                    </div>
+                    <span className="font-bold text-white">{p.name}</span>
+                  </div>
+                </td>
+                {qIndices.map(qi => {
+                  const pts = history[qi] ?? 0;
+                  const colorClass =
+                    pts === 1000 ? 'text-yellow-400' :
+                    pts === 800  ? 'text-neon-blue'  :
+                    pts === 500  ? 'text-indigo-400' :
+                                   'text-gray-600';
+                  return (
+                    <td key={qi} className={`p-3 text-center font-bold ${colorClass}`}>
+                      {pts > 0 ? pts : '—'}
+                    </td>
+                  );
+                })}
+                <td className="p-3 text-center text-gray-400">{correct}/{totalQuestions}</td>
+                <td className="p-3 text-right font-black text-neon-blue">{p.score}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
   );
 }
