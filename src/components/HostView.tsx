@@ -86,6 +86,10 @@ export function HostView() {
     hostGame(pendingQuestions, quizId ?? undefined);
   }, [pendingQuestions, socket, gamePin, hostGame]);
 
+  useEffect(() => {
+    if (gameState === 'LOBBY') setShowBreakdown(false);
+  }, [gameState]);
+
   if (loadingQuiz) {
     return (
       <div className="min-h-screen flex items-center justify-center text-gray-400 font-mono">
@@ -475,7 +479,7 @@ function BreakdownTable({ players, totalQuestions }: { players: Player[], totalQ
                     </td>
                   );
                 })}
-                <td className="p-3 text-center text-gray-400">{correct}/{history.length || totalQuestions}</td>
+                <td className="p-3 text-center text-gray-400">{correct}/{totalQuestions}</td>
                 <td className="p-3 text-right font-black text-neon-blue">{p.score}</td>
               </tr>
             );
