@@ -52,6 +52,7 @@ export function HostView() {
   const [pendingQuestions, setPendingQuestions] = useState<Question[] | null>(null);
   const [bigScreen, setBigScreen] = useState(false);
   const [showBreakdown, setShowBreakdown] = useState(false);
+  const [showAnswers, setShowAnswers] = useState(false);
 
   const {
     socket, gamePin, gameState, players, question, currentQuestionIndex,
@@ -90,6 +91,10 @@ export function HostView() {
     if (gameState === 'LOBBY') setShowBreakdown(false);
   }, [gameState]);
 
+  useEffect(() => {
+    setShowAnswers(false);
+  }, [gameState]);
+
   if (loadingQuiz) {
     return (
       <div className="min-h-screen flex items-center justify-center text-gray-400 font-mono">
@@ -111,6 +116,18 @@ export function HostView() {
 
   const publicBase = import.meta.env.VITE_PUBLIC_URL?.replace(/\/$/, '') || window.location.origin;
   const joinUrl = `${publicBase}/join?pin=${gamePin}`;
+
+  // scoreHistory.at(-1) is this question's earned pts. On Q1 it's empty → prevScore = p.score → same order → all 'same'.
+  // JS stable sort preserves input order for equal elements, so Q1 ties produce same prevRanking as current ranking.
+  const prevScore = (p: Player) => p.score - (p.scoreHistory.at(-1) ?? 0);
+  const prevRanking = [...players].sort((a, b) => prevScore(b) - prevScore(a));
+  const prevRankMap = new Map(prevRanking.map((p, i) => [p.id, i]));
+  const rankDelta = (p: Player, idx: number): 'up' | 'down' | 'same' => {
+    const prev = prevRankMap.get(p.id) ?? idx;
+    if (idx < prev) return 'up';
+    if (idx > prev) return 'down';
+    return 'same';
+  };
 
   return (
     <div className={`h-screen overflow-hidden flex flex-col p-4 md:p-8 relative${bigScreen ? ' big-screen' : ''}`}>
@@ -273,55 +290,106 @@ export function HostView() {
         <div className="flex-1 flex flex-col max-w-6xl mx-auto w-full pt-12 overflow-y-auto">
           <h2 className="text-4xl text-center mb-8 font-mono tracking-widest text-gray-400">MISSION UPDATE</h2>
           
-          <div className="glass p-8 rounded-3xl mb-12">
-             <h3 className="text-3xl font-bold mb-8 text-center">{question.text}</h3>
-             <div className="grid grid-cols-1 gap-4 max-w-3xl mx-auto">
-               {(() => {
-                 const total = answerCounts.reduce((a, b) => a + b, 0);
-                 return question.options.map((opt, i) => {
-                 const isCorrect = i === question.correctIndex;
-                 const count = answerCounts[i] ?? 0;
-                 const pct = total > 0 ? Math.round((count / total) * 100) : 0;
-
-                 return (
+          {!showAnswers && (
+            <div className="glass p-6 rounded-3xl mb-12 max-w-2xl mx-auto w-full">
+              <div className="font-mono text-xs tracking-widest text-gray-500 mb-4 uppercase">
+                Top Pilots — After Q{currentQuestionIndex + 1}
+              </div>
+              {players.slice(0, 5).map((p, idx) => {
+                const pts = p.scoreHistory.at(-1) ?? 0;
+                const delta = rankDelta(p, idx);
+                const rankColor =
+                  idx === 0 ? 'text-yellow-400' :
+                  idx === 2 ? 'text-orange-600' :
+                  'text-gray-400';
+                return (
                   <div
-                    key={i}
-                    className={`p-6 rounded-2xl flex flex-col gap-3 text-xl font-bold ${
-                      isCorrect
-                        ? 'bg-neon-green/20 border-2 border-neon-green text-neon-green shadow-[0_0_15px_rgba(52,211,153,0.3)]'
-                        : 'bg-red-500/20 border border-red-500/50 text-red-500 opacity-60'
+                    key={p.id}
+                    className={`flex items-center gap-3 px-4 py-3 rounded-xl mb-2 ${
+                      idx === 0 ? 'bg-yellow-400/5 border-l-2 border-yellow-400' : 'bg-white/5'
                     }`}
                   >
-                    <div className="flex items-center justify-between">
-                      <span>{opt}</span>
-                      <div className="flex items-center gap-3">
-                        {isCorrect && (
-                          <span className="bg-neon-green text-black px-3 py-1 rounded text-sm shadow-[0_0_15px_rgba(52,211,153,0.6)]">
-                            CORRECT ORBIT
-                          </span>
-                        )}
-                        <span className="vote-count font-mono text-lg">
-                          {count}{total > 0 ? ` (${pct}%)` : ''}
-                        </span>
-                      </div>
+                    <span className={`font-mono font-bold w-5 text-center ${rankColor}`}>{idx + 1}</span>
+                    <div
+                      className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 border border-white/20 text-sm"
+                      style={{ backgroundColor: p.color, boxShadow: `0 0 8px ${p.color}50` }}
+                    >
+                      {p.avatar}
                     </div>
-                    <div className="w-full bg-white/10 rounded-full h-2">
-                      <div
-                        className={`h-2 rounded-full transition-all duration-500 ${
-                          isCorrect ? 'bg-neon-green/80' : 'bg-red-500/60'
-                        }`}
-                        style={{ width: `${pct}%` }}
-                      />
-                    </div>
+                    <span className="text-white font-semibold flex-1">{p.name}</span>
+                    <span className={`font-mono text-sm w-14 text-right ${pts > 0 ? 'text-neon-green' : 'text-gray-600'}`}>
+                      {pts > 0 ? `+${pts}` : '—'}
+                    </span>
+                    <span className={`text-base w-5 text-center ${
+                      delta === 'up' ? 'text-neon-green' :
+                      delta === 'down' ? 'text-red-500' :
+                      'text-gray-600'
+                    }`}>
+                      {delta === 'up' ? '↑' : delta === 'down' ? '↓' : '—'}
+                    </span>
+                    <span className="font-mono font-bold text-neon-blue w-16 text-right">{p.score} pts</span>
                   </div>
-                 );
-               });
-               })()}
-             </div>
-          </div>
+                );
+              })}
+            </div>
+          )}
 
-          <div className="flex justify-end gap-4 p-4 glass fixed bottom-8 right-8 z-10 rounded-3xl">
-             <button 
+          {showAnswers && (
+            <div className="glass p-8 rounded-3xl mb-12">
+              <h3 className="text-3xl font-bold mb-8 text-center">{question.text}</h3>
+              <div className="grid grid-cols-1 gap-4 max-w-3xl mx-auto">
+                {(() => {
+                  const total = answerCounts.reduce((a, b) => a + b, 0);
+                  return question.options.map((opt, i) => {
+                    const isCorrect = i === question.correctIndex;
+                    const count = answerCounts[i] ?? 0;
+                    const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+                    return (
+                      <div
+                        key={i}
+                        className={`p-6 rounded-2xl flex flex-col gap-3 text-xl font-bold ${
+                          isCorrect
+                            ? 'bg-neon-green/20 border-2 border-neon-green text-neon-green shadow-[0_0_15px_rgba(52,211,153,0.3)]'
+                            : 'bg-red-500/20 border border-red-500/50 text-red-500 opacity-60'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span>{opt}</span>
+                          <div className="flex items-center gap-3">
+                            {isCorrect && (
+                              <span className="bg-neon-green text-black px-3 py-1 rounded text-sm shadow-[0_0_15px_rgba(52,211,153,0.6)]">
+                                CORRECT ORBIT
+                              </span>
+                            )}
+                            <span className="vote-count font-mono text-lg">
+                              {count}{total > 0 ? ` (${pct}%)` : ''}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="w-full bg-white/10 rounded-full h-2">
+                          <div
+                            className={`h-2 rounded-full transition-all duration-500 ${
+                              isCorrect ? 'bg-neon-green/80' : 'bg-red-500/60'
+                            }`}
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  });
+                })()}
+              </div>
+            </div>
+          )}
+
+          <div className="flex items-center justify-between gap-6 p-4 glass fixed bottom-8 right-8 z-10 rounded-3xl">
+            <button
+              onClick={() => setShowAnswers(v => !v)}
+              className="text-gray-500 font-mono text-sm underline underline-offset-2 hover:text-gray-300 transition-colors"
+            >
+              {showAnswers ? 'hide answers' : 'view answers'}
+            </button>
+            <button
               onClick={nextQuestion}
               className="py-4 px-8 text-white font-black rounded-[2rem] text-lg flex items-center gap-2 uppercase tracking-tighter btn-funky"
             >
