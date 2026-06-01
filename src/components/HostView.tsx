@@ -52,6 +52,7 @@ export function HostView() {
   const [pendingQuestions, setPendingQuestions] = useState<Question[] | null>(null);
   const [bigScreen, setBigScreen] = useState(false);
   const [showBreakdown, setShowBreakdown] = useState(false);
+  const [showAnswers, setShowAnswers] = useState(false);
 
   const {
     socket, gamePin, gameState, players, question, currentQuestionIndex,
@@ -88,6 +89,10 @@ export function HostView() {
 
   useEffect(() => {
     if (gameState === 'LOBBY') setShowBreakdown(false);
+  }, [gameState]);
+
+  useEffect(() => {
+    setShowAnswers(false);
   }, [gameState]);
 
   if (loadingQuiz) {
