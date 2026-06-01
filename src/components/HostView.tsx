@@ -117,11 +117,10 @@ export function HostView() {
   const publicBase = import.meta.env.VITE_PUBLIC_URL?.replace(/\/$/, '') || window.location.origin;
   const joinUrl = `${publicBase}/join?pin=${gamePin}`;
 
-  // scoreHistory.at(-1) is this question's earned pts. On Q1 it's empty → prevScore = p.score → same order → all 'same'. Correct.
+  // scoreHistory.at(-1) is this question's earned pts. On Q1 it's empty → prevScore = p.score → same order → all 'same'.
+  // JS stable sort preserves input order for equal elements, so Q1 ties produce same prevRanking as current ranking.
   const prevScore = (p: Player) => p.score - (p.scoreHistory.at(-1) ?? 0);
-  const prevRanking = [...players].sort((a, b) =>
-    prevScore(b) - prevScore(a) || a.id.localeCompare(b.id)
-  );
+  const prevRanking = [...players].sort((a, b) => prevScore(b) - prevScore(a));
   const prevRankMap = new Map(prevRanking.map((p, i) => [p.id, i]));
   const rankDelta = (p: Player, idx: number): 'up' | 'down' | 'same' => {
     const prev = prevRankMap.get(p.id) ?? idx;
