@@ -325,8 +325,14 @@ export function HostView() {
              </div>
           </div>
 
-          <div className="flex justify-end gap-4 p-4 glass fixed bottom-8 right-8 z-10 rounded-3xl">
-             <button 
+          <div className="flex items-center justify-between gap-6 p-4 glass fixed bottom-8 right-8 z-10 rounded-3xl">
+            <button
+              onClick={() => setShowAnswers(v => !v)}
+              className="text-gray-500 font-mono text-sm underline underline-offset-2 hover:text-gray-300 transition-colors"
+            >
+              {showAnswers ? 'hide answers' : 'view answers'}
+            </button>
+            <button
               onClick={nextQuestion}
               className="py-4 px-8 text-white font-black rounded-[2rem] text-lg flex items-center gap-2 uppercase tracking-tighter btn-funky"
             >
