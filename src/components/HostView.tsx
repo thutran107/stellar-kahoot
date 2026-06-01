@@ -117,8 +117,11 @@ export function HostView() {
   const publicBase = import.meta.env.VITE_PUBLIC_URL?.replace(/\/$/, '') || window.location.origin;
   const joinUrl = `${publicBase}/join?pin=${gamePin}`;
 
+  // scoreHistory.at(-1) is this question's earned pts. On Q1 it's empty → prevScore = p.score → same order → all 'same'. Correct.
   const prevScore = (p: Player) => p.score - (p.scoreHistory.at(-1) ?? 0);
-  const prevRanking = [...players].sort((a, b) => prevScore(b) - prevScore(a));
+  const prevRanking = [...players].sort((a, b) =>
+    prevScore(b) - prevScore(a) || a.id.localeCompare(b.id)
+  );
   const prevRankMap = new Map(prevRanking.map((p, i) => [p.id, i]));
   const rankDelta = (p: Player, idx: number): 'up' | 'down' | 'same' => {
     const prev = prevRankMap.get(p.id) ?? idx;
