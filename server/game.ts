@@ -26,7 +26,10 @@ export interface Question {
 
 export interface GameSession {
   pin: string;
+  hostId: string;
   hostSocketId: string;
+  hostConnected: boolean;
+  hostGraceTimer: ReturnType<typeof setTimeout> | null;
   state: "LOBBY" | "TOPIC_REVEAL" | "QUESTION_ACTIVE" | "QUESTION_RESULTS" | "FINAL_LEADERBOARD";
   players: Record<string, Player>;
   questions: Question[];
@@ -54,7 +57,13 @@ const COSMIC_AVATARS = ["🪐", "🌍", "🌎", "🌏", "🌕", "🌑", "☄️"
  * Returns the sessions map so tests (and future inspection) can reach game state.
  * Behaviour is identical to the original inline implementation in server.ts.
  */
-export function registerGameHandlers(io: Server) {
+export interface GameHandlerOptions {
+  /** How long a session survives the host disconnecting before it ends. */
+  hostGraceMs?: number;
+}
+
+export function registerGameHandlers(io: Server, options: GameHandlerOptions = {}) {
+  const hostGraceMs = options.hostGraceMs ?? 30_000;
   const sessions = new Map<string, GameSession>();
 
   function generatePin(): string {
@@ -147,13 +156,14 @@ export function registerGameHandlers(io: Server) {
   io.on("connection", (socket) => {
     console.log("Client connected", socket.id);
 
-    socket.on("host-game", ({ customQuestions, quizId }) => {
+    socket.on("host-game", ({ customQuestions, quizId, hostId }) => {
       // Clean up any prior session this host had open
       for (const [pin, s] of sessions.entries()) {
         if (s.hostSocketId === socket.id) {
           if (s.questionTimer) clearTimeout(s.questionTimer);
           if (s.topicRevealTimer) clearTimeout(s.topicRevealTimer);
           if (s.gracePeriodTimer) clearTimeout(s.gracePeriodTimer);
+          if (s.hostGraceTimer) clearTimeout(s.hostGraceTimer);
           sessions.delete(pin);
           socket.leave(pin);
         }
@@ -162,7 +172,12 @@ export function registerGameHandlers(io: Server) {
       const pin = generatePin();
       const session: GameSession = {
         pin,
+        // Stable identity so the host can reconnect across socket drops/reloads.
+        // Falls back to the pin if an older client doesn't send one.
+        hostId: hostId ?? pin,
         hostSocketId: socket.id,
+        hostConnected: true,
+        hostGraceTimer: null,
         state: "LOBBY",
         players: {},
         questions: customQuestions || [],
@@ -192,6 +207,21 @@ export function registerGameHandlers(io: Server) {
           if (data) session.dbSessionId = data.id;
         })();
       }
+    });
+
+    socket.on("resume-host", ({ pin, hostId }) => {
+      const session = sessions.get(pin);
+      if (!session || session.hostId !== hostId) {
+        socket.emit("resume-host-error", "Host session not found.");
+        return;
+      }
+      // Host is back within the grace window — cancel the pending shutdown and rebind.
+      if (session.hostGraceTimer) { clearTimeout(session.hostGraceTimer); session.hostGraceTimer = null; }
+      session.hostSocketId = socket.id;
+      session.hostConnected = true;
+      socket.join(pin);
+      socket.emit("host-joined", { gamePin: pin });
+      broadcastState(session);
     });
 
     socket.on("start-game", () => {
@@ -361,23 +391,33 @@ export function registerGameHandlers(io: Server) {
     });
 
     socket.on("disconnect", () => {
-      // Host disconnecting — end the session
+      // Host disconnecting — don't kill the room immediately. Give the host a
+      // grace window to reconnect (a wifi blip shouldn't end the game for
+      // everyone). Only end the session if they don't return in time.
       for (const [pin, session] of sessions.entries()) {
         if (session.hostSocketId === socket.id) {
-          io.to(pin).emit("game-ended", "Host disconnected.");
-          if (session.questionTimer) clearTimeout(session.questionTimer);
-          if (session.topicRevealTimer) clearTimeout(session.topicRevealTimer);
-          if (session.gracePeriodTimer) clearTimeout(session.gracePeriodTimer);
-          if (session.dbSessionId) {
-            (async () => {
-              const { error } = await supabaseAdmin
-                .from("game_sessions")
-                .update({ state: "ended", ended_at: new Date().toISOString() })
-                .eq("id", session.dbSessionId!);
-              if (error) console.error("host-disconnect session update:", error);
-            })();
-          }
-          sessions.delete(pin);
+          session.hostConnected = false;
+          if (session.hostGraceTimer) clearTimeout(session.hostGraceTimer);
+          session.hostGraceTimer = setTimeout(() => {
+            session.hostGraceTimer = null;
+            io.to(pin).emit("game-ended", "Host disconnected.");
+            if (session.questionTimer) clearTimeout(session.questionTimer);
+            if (session.topicRevealTimer) clearTimeout(session.topicRevealTimer);
+            if (session.gracePeriodTimer) clearTimeout(session.gracePeriodTimer);
+            if (session.dbSessionId) {
+              (async () => {
+                const { error } = await supabaseAdmin
+                  .from("game_sessions")
+                  .update({ state: "ended", ended_at: new Date().toISOString() })
+                  .eq("id", session.dbSessionId!);
+                if (error) console.error("host-disconnect session update:", error);
+              })();
+            }
+            sessions.delete(pin);
+          }, hostGraceMs);
+          // Don't let a pending grace timer keep the process alive on its own
+          // (matters for clean test teardown; a live server keeps the loop alive anyway).
+          session.hostGraceTimer.unref?.();
           return;
         }
       }

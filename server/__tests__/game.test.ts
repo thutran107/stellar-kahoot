@@ -33,6 +33,10 @@ async function waitForState(socket: ClientSocket, gameState: string): Promise<an
   throw new Error(`never reached game state "${gameState}"`);
 }
 
+// Short host-reconnect grace so the expiry test doesn't wait 30s. Long enough
+// that the in-process reconnect comfortably lands inside the window.
+const HOST_GRACE_MS = 500;
+
 describe('game socket flow', () => {
   let httpServer: http.Server;
   let io: Server;
@@ -42,7 +46,7 @@ describe('game socket flow', () => {
   beforeEach(async () => {
     httpServer = http.createServer();
     io = new Server(httpServer);
-    registerGameHandlers(io);
+    registerGameHandlers(io, { hostGraceMs: HOST_GRACE_MS });
     await new Promise<void>((resolve) => httpServer.listen(0, resolve));
     port = (httpServer.address() as AddressInfo).port;
   });
@@ -130,5 +134,73 @@ describe('game socket flow', () => {
     latecomer.emit('join-game', { pin: gamePin, name: 'LATE', avatar: '🌑' });
     const err = await waitFor<string>(latecomer, 'join-error');
     expect(err).toMatch(/already started/i);
+  });
+
+  it('keeps the room alive when the host drops and lets it reconnect within the grace window', async () => {
+    const host = connect();
+    await waitFor(host, 'connect');
+    host.emit('host-game', {
+      hostId: 'host-token-1',
+      customQuestions: [
+        { text: 'Q1', options: ['A', 'B', 'C', 'D'], correctIndex: 0, timeLimit: 20000, topic: null },
+      ],
+    });
+    const { gamePin } = await waitFor<{ gamePin: string }>(host, 'host-joined');
+
+    const player = await joinPlayer(gamePin, 'ALICE', '🪐');
+
+    // The room must NOT be told the game ended when the host merely drops.
+    let gameEnded = false;
+    player.on('game-ended', () => { gameEnded = true; });
+
+    host.disconnect();
+
+    // Reconnect on a fresh socket within the grace window.
+    const host2 = connect();
+    await waitFor(host2, 'connect');
+    host2.emit('resume-host', { pin: gamePin, hostId: 'host-token-1' });
+    await waitFor(host2, 'host-joined');
+
+    // The reconnected host is back in control: it can drive the game.
+    host2.emit('start-game');
+    const active = await waitForState(player, 'QUESTION_ACTIVE');
+    expect(active.gameState).toBe('QUESTION_ACTIVE');
+    expect(gameEnded).toBe(false);
+  });
+
+  it('ends the game if the host never returns within the grace window', async () => {
+    const host = connect();
+    await waitFor(host, 'connect');
+    host.emit('host-game', {
+      hostId: 'host-token-2',
+      customQuestions: [
+        { text: 'Q1', options: ['A', 'B', 'C', 'D'], correctIndex: 0, timeLimit: 20000, topic: null },
+      ],
+    });
+    const { gamePin } = await waitFor<{ gamePin: string }>(host, 'host-joined');
+
+    const player = await joinPlayer(gamePin, 'ALICE', '🪐');
+
+    const ended = waitFor<string>(player, 'game-ended', HOST_GRACE_MS + 2000);
+    host.disconnect();
+    expect(await ended).toMatch(/host disconnected/i);
+  });
+
+  it('rejects a resume-host with the wrong token', async () => {
+    const host = connect();
+    await waitFor(host, 'connect');
+    host.emit('host-game', {
+      hostId: 'host-token-3',
+      customQuestions: [
+        { text: 'Q1', options: ['A', 'B', 'C', 'D'], correctIndex: 0, timeLimit: 20000, topic: null },
+      ],
+    });
+    const { gamePin } = await waitFor<{ gamePin: string }>(host, 'host-joined');
+
+    const impostor = connect();
+    await waitFor(impostor, 'connect');
+    impostor.emit('resume-host', { pin: gamePin, hostId: 'wrong-token' });
+    const err = await waitFor<string>(impostor, 'resume-host-error');
+    expect(err).toMatch(/not found/i);
   });
 });

@@ -57,7 +57,7 @@ export function HostView() {
   const {
     socket, gamePin, gameState, players, question, currentQuestionIndex,
     totalQuestions, hostGame, startGame, showResults, nextQuestion,
-    questionStartTime, connect, answerCounts,
+    questionStartTime, connect, answerCounts, isResuming,
   } = useGameStore();
 
   useEffect(() => { connect(); }, [connect]);
@@ -83,9 +83,11 @@ export function HostView() {
   }, [quizId]);
 
   useEffect(() => {
-    if (!pendingQuestions || !socket || gamePin) return;
+    // Hold off auto-hosting while a host-reconnect is in flight, so a reload
+    // reclaims the existing game instead of spinning up a duplicate.
+    if (!pendingQuestions || !socket || gamePin || isResuming) return;
     hostGame(pendingQuestions, quizId ?? undefined);
-  }, [pendingQuestions, socket, gamePin, hostGame]);
+  }, [pendingQuestions, socket, gamePin, isResuming, hostGame]);
 
   useEffect(() => {
     if (gameState === 'LOBBY') setShowBreakdown(false);
