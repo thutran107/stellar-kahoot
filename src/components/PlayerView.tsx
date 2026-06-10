@@ -7,8 +7,28 @@ import { CountdownTimer } from './CountdownTimer';
 import { PlayerProgressBar } from './PlayerProgressBar';
 import { TopicRevealScreen } from './TopicReveal';
 import { TOPIC_META, TopicKey } from '../lib/topics';
+import { useReducedEffects } from '../hooks/useReducedEffects';
 
 function PlayerThemeEffects() {
+  const lite = useReducedEffects();
+
+  // On phones, the animated blur(50px) + mix-blend-screen clouds are what push
+  // iOS Safari into an out-of-memory tab crash. Swap them for a static, near-free
+  // gradient glow that reads the same on a small screen.
+  if (lite) {
+    return (
+      <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+        <div
+          className="absolute inset-0 opacity-40"
+          style={{
+            background:
+              'radial-gradient(circle at 25% 15%, rgba(139,92,246,0.28) 0%, rgba(0,0,0,0) 55%), radial-gradient(circle at 80% 85%, rgba(236,72,153,0.22) 0%, rgba(0,0,0,0) 55%)',
+          }}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
       {/* Drifting Nebula Clouds */}

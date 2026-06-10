@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
+import { useReducedEffects } from '../hooks/useReducedEffects';
 
 const PLANETS = [
   {
@@ -37,12 +38,14 @@ const PLANETS = [
 ];
 
 export function CosmicBackground() {
+  const lite = useReducedEffects();
   const [stars, setStars] = useState<{ id: number; top: string; left: string; size: number; delay: number; duration: number }[]>([]);
 
   useEffect(() => {
     // Generate stars only on the client side to avoid hydration mismatches if we had SSR,
-    // and to keep generating consistent arrays.
-    const generatedStars = Array.from({ length: 60 }).map((_, i) => ({
+    // and to keep generating consistent arrays. Fewer on phones to ease GPU/memory load.
+    const starCount = lite ? 20 : 60;
+    const generatedStars = Array.from({ length: starCount }).map((_, i) => ({
       id: i,
       top: `${Math.random() * 100}%`,
       left: `${Math.random() * 100}%`,
@@ -51,7 +54,7 @@ export function CosmicBackground() {
       duration: Math.random() * 3 + 2,
     }));
     setStars(generatedStars);
-  }, []);
+  }, [lite]);
 
   return (
     <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
@@ -65,13 +68,13 @@ export function CosmicBackground() {
             left: star.left,
             width: star.size,
             height: star.size,
-            opacity: 0.1,
+            opacity: lite ? 0.5 : 0.1,
           }}
-          animate={{
+          animate={lite ? undefined : {
             opacity: [0.1, 0.6, 0.1],
             scale: [1, 1.2, 1],
           }}
-          transition={{
+          transition={lite ? undefined : {
             duration: star.duration,
             delay: star.delay,
             repeat: Infinity,
@@ -91,15 +94,15 @@ export function CosmicBackground() {
             background: planet.bg,
             top: planet.top,
             left: planet.left,
-            filter: planet.blur,
+            filter: lite ? 'none' : planet.blur,
             boxShadow: 'inset -20px -20px 50px rgba(0,0,0,0.8)',
           }}
-          animate={{
+          animate={lite ? undefined : {
             y: [0, -30, 0],
             x: [0, 20, 0],
             rotate: [0, 30, 0],
           }}
-          transition={{
+          transition={lite ? undefined : {
             duration: planet.duration,
             repeat: Infinity,
             ease: 'easeInOut',
