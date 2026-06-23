@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Building StellarTrivia with Superpowers — A Case Study</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --neon-pink:#f472b6; --neon-blue:#22d3ee; --neon-purple:#4f46e5;
+    --neon-green:#34d399; --space-dark:#020617; --space-light:#1e1b4b;
+    --ink:#e2e8f0; --muted:#94a3b8; --card:rgba(30,27,75,.45);
+    --line:rgba(148,163,184,.18);
+    --sans:'Space Grotesk',system-ui,sans-serif;
+    --mono:'JetBrains Mono',ui-monospace,monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0; font-family:var(--sans); color:var(--ink); line-height:1.65;
+    background:
+      radial-gradient(1100px 700px at 12% -8%, rgba(79,70,229,.32), transparent 60%),
+      radial-gradient(900px 600px at 95% 4%, rgba(34,211,238,.18), transparent 55%),
+      radial-gradient(800px 700px at 60% 110%, rgba(244,114,182,.16), transparent 55%),
+      var(--space-dark);
+    background-attachment:fixed;
+  }
+  body::before{
+    content:""; position:fixed; inset:0; z-index:0; pointer-events:none;
+    background-image:
+      radial-gradient(1.4px 1.4px at 20% 30%, #fff, transparent),
+      radial-gradient(1.2px 1.2px at 70% 60%, #cbd5e1, transparent),
+      radial-gradient(1px 1px at 40% 80%, #fff, transparent),
+      radial-gradient(1.4px 1.4px at 85% 20%, #e0e7ff, transparent),
+      radial-gradient(1px 1px at 55% 12%, #fff, transparent);
+    opacity:.5;
+  }
+  .wrap{position:relative; z-index:1; max-width:920px; margin:0 auto; padding:0 22px 96px}
+
+  header.hero{text-align:center; padding:88px 16px 40px}
+  .kicker{
+    font-family:var(--mono); font-size:.72rem; letter-spacing:.34em; text-transform:uppercase;
+    color:var(--neon-blue); margin-bottom:22px;
+    display:inline-block; padding:7px 16px; border:1px solid rgba(34,211,238,.4);
+    border-radius:999px; background:rgba(34,211,238,.06);
+  }
+  h1{
+    font-size:clamp(2.1rem,6vw,3.7rem); line-height:1.05; margin:.2em 0 .35em; font-weight:700;
+    background:linear-gradient(100deg,#fff 10%,var(--neon-blue) 45%,var(--neon-pink) 80%);
+    -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
+  }
+  .sub{font-size:1.12rem; color:var(--muted); max-width:660px; margin:0 auto}
+  .stats{display:flex; flex-wrap:wrap; gap:14px; justify-content:center; margin:34px 0 6px}
+  .stat{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px 20px; min-width:120px; backdrop-filter:blur(8px)}
+  .stat b{display:block; font-size:1.55rem; color:var(--neon-green); font-family:var(--mono)}
+  .stat span{font-size:.78rem; color:var(--muted); text-transform:uppercase; letter-spacing:.12em}
+
+  section{margin-top:64px}
+  h2{font-size:1.7rem; margin:0 0 8px; font-weight:700; display:flex; align-items:center; gap:12px}
+  h2 .bar{width:5px; height:1.5em; border-radius:3px; background:linear-gradient(var(--neon-pink),var(--neon-purple))}
+  .lead{color:var(--muted); margin:0 0 26px; font-size:1.02rem}
+  p{margin:.6em 0}
+  a{color:var(--neon-blue)}
+  code{font-family:var(--mono); font-size:.85em; background:rgba(34,211,238,.1);
+    color:var(--neon-blue); padding:.12em .42em; border-radius:5px; border:1px solid rgba(34,211,238,.18)}
+
+  /* TABLES */
+  .tbl{width:100%; border-collapse:collapse; margin:10px 0; font-size:.9rem;
+    background:var(--card); border-radius:14px; overflow:hidden; border:1px solid var(--line)}
+  .tbl th,.tbl td{text-align:left; padding:11px 14px; border-bottom:1px solid var(--line); vertical-align:top}
+  .tbl th{background:rgba(79,70,229,.22); font-weight:600; color:#fff; font-size:.78rem; text-transform:uppercase; letter-spacing:.06em}
+  .tbl tr:last-child td{border-bottom:none}
+  .tbl .door{color:var(--neon-green); font-family:var(--mono); font-size:.82rem}
+
+  /* STEP CARDS (the feature cycle) */
+  .steps{display:grid; gap:18px; margin-top:10px}
+  .step{background:var(--card); border:1px solid var(--line); border-radius:16px; padding:22px 24px;
+    backdrop-filter:blur(8px); border-left:4px solid var(--accent,var(--neon-pink))}
+  .step-head{display:flex; align-items:center; gap:14px; margin-bottom:6px}
+  .step-num{flex:none; width:38px; height:38px; border-radius:11px; display:grid; place-items:center;
+    font-family:var(--mono); font-weight:700; font-size:1.05rem; color:var(--space-dark);
+    background:linear-gradient(135deg,var(--neon-blue),var(--neon-green))}
+  .step-head h3{margin:0; font-size:1.14rem; color:#fff}
+  .step-head .ic{font-size:1.25rem; margin-left:auto}
+  .lbl{display:block; font-family:var(--mono); font-size:.64rem; letter-spacing:.16em; text-transform:uppercase;
+    color:var(--neon-blue); margin:15px 0 2px}
+  .lbl.decision{color:var(--neon-pink)}
+  .step p,.card p{font-size:.94rem}
+
+  /* SKILL CARDS (different doors) */
+  .cards{display:grid; grid-template-columns:repeat(auto-fit,minmax(290px,1fr)); gap:16px; margin-top:10px}
+  .card{background:var(--card); border:1px solid var(--line); border-radius:16px; padding:20px 22px 22px;
+    backdrop-filter:blur(8px); position:relative; overflow:hidden; border-left:4px solid var(--accent,var(--neon-pink))}
+  .card .top{display:flex; align-items:center; gap:10px; margin-bottom:2px}
+  .card .ic{font-size:1.4rem}
+  .card h3{margin:0; font-size:1.04rem; color:#fff}
+  .card .when{font-family:var(--mono); font-size:.6rem; color:var(--muted); text-transform:uppercase; letter-spacing:.1em; margin-bottom:4px}
+
+  /* CALLOUTS */
+  .callout{background:linear-gradient(180deg, rgba(244,114,182,.08), rgba(2,6,23,0));
+    border:1px solid rgba(244,114,182,.32); border-left:4px solid var(--neon-pink);
+    border-radius:14px; padding:16px 20px; margin:16px 0}
+  .callout .h{font-weight:700; color:#fff; display:flex; gap:8px; align-items:center; margin-bottom:4px}
+  .callout p{margin:.35em 0; font-size:.93rem}
+  .quote{border-left:3px solid var(--neon-blue); padding:8px 0 8px 16px; margin:14px 0;
+    color:var(--muted); font-family:var(--mono); font-size:.82rem; background:rgba(34,211,238,.04)}
+
+  /* TL;DR */
+  ol.tldr{counter-reset:t; list-style:none; padding:0; display:grid; gap:12px}
+  ol.tldr li{counter-increment:t; background:var(--card); border:1px solid var(--line); border-radius:12px;
+    padding:14px 16px 14px 56px; position:relative; font-size:.95rem}
+  ol.tldr li::before{content:counter(t); position:absolute; left:14px; top:14px;
+    width:28px; height:28px; border-radius:8px; display:grid; place-items:center;
+    font-family:var(--mono); font-weight:700; color:var(--space-dark);
+    background:linear-gradient(135deg,var(--neon-blue),var(--neon-green))}
+
+  /* GALLERIES */
+  .gallery{display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:14px; margin:20px 0; align-items:start}
+  .shot{position:relative; margin:0; border-radius:14px; overflow:hidden; border:1px solid var(--line);
+    background:var(--space-light); box-shadow:0 10px 32px rgba(2,6,23,.55);
+    transition:transform .22s, border-color .22s, box-shadow .22s}
+  .shot:hover{transform:translateY(-5px); border-color:var(--neon-blue); box-shadow:0 16px 44px rgba(34,211,238,.28)}
+  .shot img{display:block; width:100%; height:auto}
+  .shot figcaption{position:absolute; left:0; right:0; bottom:0; padding:18px 12px 9px;
+    background:linear-gradient(transparent, rgba(2,6,23,.94)); font-family:var(--mono);
+    font-size:.68rem; letter-spacing:.04em; color:var(--ink)}
+  .shot figcaption b{color:var(--neon-green)}
+  .step .gallery{grid-template-columns:1fr 1fr; gap:10px; margin:10px 0 2px}
+  .step .shot figcaption{font-size:.6rem; padding:14px 8px 6px}
+
+  footer{margin-top:72px; padding-top:24px; border-top:1px solid var(--line);
+    text-align:center; color:var(--muted); font-size:.85rem}
+  @media (max-width:560px){ .step .gallery{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hero">
+    <span class="kicker">★ Superpowers · Case Study</span>
+    <h1>Building StellarTrivia<br>with Superpowers</h1>
+    <p class="sub">How a structured skill workflow turned good engineering decisions into the
+      <em>default path</em> — told through the real commits of a live multiplayer quiz game.</p>
+    <div class="stats">
+      <div class="stat"><b>~3mo</b><span>One developer</span></div>
+      <div class="stat"><b>19</b><span>Pull requests</span></div>
+      <div class="stat"><b>9/12</b><span>Features spec'd</span></div>
+      <div class="stat"><b>3</b><span>Work types, 3 doors</span></div>
+    </div>
+  </header>
+
+  <p class="lead" style="text-align:center;max-width:680px;margin:0 auto">
+    Almost none of the interesting work was “write feature X.” It was <strong>deciding well</strong> —
+    what to spec, what to test first, what to measure, and what to <em>not</em> build. Every claim
+    below is backed by a real commit you can open in <code>git log</code>.
+  </p>
+
+  <!-- WHAT SHIPPED -->
+  <div class="gallery">
+    <figure class="shot"><img src="screenshots/home.png" alt="StellarTrivia home screen">
+      <figcaption><b>Entry</b> · join or host</figcaption></figure>
+    <figure class="shot"><img src="screenshots/live-host-lobby.png" alt="Host lobby with PIN and QR">
+      <figcaption><b>Host view</b> · PIN + QR, crew boards</figcaption></figure>
+    <figure class="shot"><img src="screenshots/live-player-join.png" alt="Player join form">
+      <figcaption><b>Player join</b> · PIN, name, planet — no login</figcaption></figure>
+    <figure class="shot"><img src="screenshots/live-player-lobby.png" alt="Player lobby">
+      <figcaption><b>Player lobby</b> · you're in</figcaption></figure>
+  </div>
+
+  <!-- CORE IDEA -->
+  <section>
+    <h2><span class="bar"></span>The core idea: match the cycle to the work</h2>
+    <p class="lead">Superpowers is <strong>not</strong> “run every skill every time.” It is: every piece of
+      work goes through a disciplined path, and the path depends on the kind of work. Three kinds showed
+      up building this game — each enters through a different skill.</p>
+    <table class="tbl">
+      <tr><th>Work type</th><th>The path it takes</th><th>Enters through</th><th>Examples here</th></tr>
+      <tr>
+        <td><b>New feature</b></td>
+        <td>brainstorm → plan → build → review → verify → finish</td>
+        <td class="door">brainstorming</td>
+        <td>PIN-join, image upload, leaderboards</td>
+      </tr>
+      <tr>
+        <td><b>Bug</b></td>
+        <td>reproduce → find the layer → fix → verify → finish</td>
+        <td class="door">systematic-debugging</td>
+        <td>mobile Safari crash</td>
+      </tr>
+      <tr>
+        <td><b>Refactor / hardening</b></td>
+        <td>make it testable → change → verify → finish</td>
+        <td class="door">test-driven-development</td>
+        <td>reconnection grace window</td>
+      </tr>
+    </table>
+    <div class="callout">
+      <div class="h">⚖️ An honest caveat</div>
+      <p>Not every feature got the full treatment. 9 of 12 features have a design spec; the original
+        scaffold, public hosting, and the host-screen fit went straight to a plan; the hardening work
+        has no spec at all. That’s the lesson, not a failure — the discipline scales to the
+        <strong>risk</strong>, and a bug is not brainstormed, it’s debugged.</p>
+    </div>
+  </section>
+
+  <!-- FEATURE CYCLE: PIN-JOIN -->
+  <section>
+    <h2><span class="bar"></span>A complete feature cycle: “PIN&nbsp;Join — No&nbsp;Auth”</h2>
+    <p class="lead">One feature, the whole cycle. Players were blocked at <code>/join</code> by a Google
+      sign-in redirect, the server ran one game at a time, and mobile join was clumsy. Each step below:
+      <em>what the skill does → what it produced here → the decision it drove.</em></p>
+
+    <div class="steps">
+
+      <div class="step" style="--accent:var(--neon-pink)">
+        <div class="step-head"><span class="step-num">1</span><h3>brainstorming</h3><span class="ic">🧠</span></div>
+        <span class="lbl">What it does</span>
+        <p>Before any code, forces three questions — purpose, constraints, success criteria — then 2–3
+          approaches, then an approved <code>…-design.md</code>. Its <b>Goals</b> and <b>Non-Goals</b>
+          are those questions, answered.</p>
+        <span class="lbl">In this build</span>
+        <p><b>Goals:</b> join with PIN + nickname, no account; QR to join; many concurrent games; host
+          login unchanged. <b>Non-Goals</b> (the “should we also…?” answered <em>no</em>): Redis, REST
+          endpoints, player accounts, scaling. <b>Approach:</b> instead of “guard the redirect,” trace
+          the cause (global <code>init()</code>) and extract an <code>&lt;AuthGate&gt;</code> so
+          <code>/join</code> never imports auth. It enumerated the two surfaces the game needs:</p>
+        <div class="gallery">
+          <figure class="shot"><img src="screenshots/live-host-lobby.png" alt="Host view"><figcaption><b>Host view</b></figcaption></figure>
+          <figure class="shot"><img src="screenshots/live-player-join.png" alt="Player view"><figcaption><b>Player view</b></figcaption></figure>
+        </div>
+        <span class="lbl decision">Decision</span>
+        <p>A login-free join <em>by design</em>, and four sub-projects skipped on paper — YAGNI at design
+          time. <span style="color:var(--muted)">(The same self-review step caught a real defect elsewhere:
+          <code>01d1881</code> turned a vague image-delete step into a precise contract before any code existed.)</span></p>
+      </div>
+
+      <div class="step" style="--accent:var(--neon-purple)">
+        <div class="step-head"><span class="step-num">2</span><h3>writing-plans</h3><span class="ic">📋</span></div>
+        <span class="lbl">What it does</span>
+        <p>Turns the approved spec into a task list a machine can run: a <b>File Map</b> (every file,
+          create vs. modify, why) and numbered tasks that each end in <em>type-check → commit</em>. It
+          even names its own executor.</p>
+        <span class="lbl">In this build</span>
+        <p>The plan opens with <em>“REQUIRED SUB-SKILL: superpowers:subagent-driven-development… task-by-task,”</em>
+          lists exactly 4 files, and spells out Task 1 as: create <code>AuthGate.tsx</code> →
+          <code>npm run lint</code> → commit. That commit message is <code>adbc3b6</code> <b>verbatim</b> in the log.</p>
+        <span class="lbl decision">Decision</span>
+        <p>Building became assembly, not discovery — no “oh, I also need to touch <code>store.ts</code>” mid-stream.</p>
+      </div>
+
+      <div class="step" style="--accent:var(--neon-green)">
+        <div class="step-head"><span class="step-num">3</span><h3>subagent-driven-development</h3><span class="ic">⚙️</span></div>
+        <span class="lbl">What it does</span>
+        <p>Execute the plan task-by-task. Each task is small enough that a fresh agent can run it cold,
+          and each ends in its own commit — so history stays bisectable.</p>
+        <span class="lbl">In this build</span>
+        <table class="tbl" style="margin-top:6px">
+          <tr><th>Commit</th><th>Task</th></tr>
+          <tr><td><code>adbc3b6</code></td><td>add <code>AuthGate</code> component</td></tr>
+          <tr><td><code>d469929</code></td><td>move <code>init()</code> in so <code>/join</code> never touches Supabase</td></tr>
+          <tr><td><code>fe1cc96</code></td><td>multi-session server: 6-digit PIN + room-scoped broadcasts</td></tr>
+          <tr><td><code>866cc45</code></td><td><em>corrective</em> — fix disconnect, room cleanup, grace timer</td></tr>
+        </table>
+        <span class="lbl decision">Decision</span>
+        <p>Every step independently revertable — including <code>866cc45</code>, the catch that the
+          multi-session refactor had broken disconnect handling.</p>
+      </div>
+
+      <div class="step" style="--accent:var(--neon-blue)">
+        <div class="step-head"><span class="step-num">4</span><h3>finishing-a-development-branch</h3><span class="ic">🌿</span></div>
+        <span class="lbl">What it does</span>
+        <p>When the work is complete and verified, pick how to land it (merge / PR / cleanup) and keep
+          the branch to one concern.</p>
+        <span class="lbl">In this build</span>
+        <p>PIN-join shipped as <b>PR #3</b> — one feature, one branch, one revert button. Across the
+          project that’s 19 small PRs, each undoable on its own.</p>
+        <span class="lbl decision">Decision</span>
+        <p>“Undo all of this” stays a one-line command instead of git archaeology.</p>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- DIFFERENT DOORS -->
+  <section>
+    <h2><span class="bar"></span>Same machine, different doors</h2>
+    <p class="lead">PIN-join was a <em>feature</em>, so it entered through brainstorming. Other work
+      enters elsewhere — and skipping brainstorming there is correct, not lazy.</p>
+    <div class="cards">
+
+      <div class="card" style="--accent:var(--neon-pink)">
+        <div class="when">▸ a bug</div>
+        <div class="top"><span class="ic">🐛</span><h3>systematic-debugging</h3></div>
+        <span class="lbl">What it does</span>
+        <p>Reproduce, identify <em>which layer</em> is failing, confirm the root cause — instead of
+          pattern-matching a plausible patch.</p>
+        <span class="lbl">In this build</span>
+        <p>An iOS Safari tab died with “A problem repeatedly occurred.” Not a JS error — a
+          render-process <b>OOM</b> from ~70 animated <code>blur()</code> + <code>mix-blend</code> layers.
+          Fix <code>8e9ff44</code> gated heavy effects on mobile.</p>
+        <span class="lbl decision">Decision</span>
+        <p>Effort went to the real cause, not the server load tests that are blind to a browser crash.</p>
+      </div>
+
+      <div class="card" style="--accent:var(--neon-green)">
+        <div class="when">▸ a refactor</div>
+        <div class="top"><span class="ic">🧪</span><h3>test-driven-development</h3></div>
+        <span class="lbl">What it does</span>
+        <p>For silent-corruption-prone logic, get a failing test first. If the code isn’t reachable by a
+          test, make it reachable <em>before</em> changing behavior.</p>
+        <span class="lbl">In this build</span>
+        <p><code>2221e6e</code> extract <code>server/game.ts</code> + baseline socket test, <em>then</em>
+          <code>5c61720</code> add the 30s grace window — built against an injectable <code>hostGraceMs</code>
+          so a test uses 150ms, not 30s.</p>
+        <span class="lbl decision">Decision</span>
+        <p>Logic made testable <em>before</em> behavior changed — verifiable the moment it landed.</p>
+      </div>
+
+      <div class="card" style="--accent:var(--neon-blue)">
+        <div class="when">▸ every path</div>
+        <div class="top"><span class="ic">✅</span><h3>verification-before-completion</h3></div>
+        <span class="lbl">What it does</span>
+        <p>Before claiming it works, run the actual check and show the output — and state plainly what is
+          <em>not</em> verified.</p>
+        <span class="lbl">In this build</span>
+        <p>Audio shipped with <code>76a61e2</code> — “smoke test passed, all assets 200, no JS errors.”
+          And the honest inverse: client reconnection was flagged “built but not auto-tested.”</p>
+        <span class="lbl decision">Decision</span>
+        <p>Claims matched evidence; the one real gap was named, not hidden.</p>
+      </div>
+
+      <div class="card" style="--accent:var(--neon-purple)">
+        <div class="when">▸ every merge</div>
+        <div class="top"><span class="ic">👀</span><h3>requesting / receiving-code-review</h3></div>
+        <span class="lbl">What it does</span>
+        <p>Before landing, a review pass focused on correctness and security; act on real issues, push
+          back on wrong ones.</p>
+        <span class="lbl">In this build</span>
+        <p>The public read endpoint (<code>a4e4bde</code>) was followed immediately by <code>c5255d1</code>
+          — “prevent host_id leakage.” Review caught a data-leak <em>before</em> merge. Same pass hardened
+          the upload endpoint (<code>d7453d3</code>).</p>
+        <span class="lbl decision">Decision</span>
+        <p>Review changed the diff — it wasn’t ceremony.</p>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- STEERED AWAY -->
+  <section>
+    <h2><span class="bar"></span>Decisions superpowers steered us <em>away</em> from</h2>
+    <p class="lead">The most valuable outputs were sometimes the code <strong>not</strong> written.</p>
+
+    <div class="callout">
+      <div class="h">🛑 The answer-storm optimization we deliberately skipped</div>
+      <p>Full-state broadcast on every answer is textbook O(N²). We <b>measured</b> it
+        (50 players → 90ms stall; 100 → 480ms) instead of guessing, then chose <b>not</b> to fix it:
+        the real target is ~40 players (~50ms, imperceptible). Measure-before-optimize + YAGNI skipped a
+        whole project.</p>
+    </div>
+    <div class="callout">
+      <div class="h">🛑 Auth that never loads on the join path</div>
+      <p>The no-auth spec scoped Supabase behind <code>&lt;AuthGate&gt;</code> so <code>/join</code> never
+        imports auth (<code>adbc3b6</code>, <code>d469929</code>) — a design decision, not a mid-build patch.
+        A player needs only a PIN, a name, and a planet:</p>
+      <figure class="shot" style="max-width:340px;margin:12px auto 2px">
+        <img src="screenshots/live-player-join.png" alt="Player join — PIN, nickname, planet, no login">
+        <figcaption><b>No email, no password</b> · PIN + nickname + planet → ENTER</figcaption>
+      </figure>
+    </div>
+    <div class="callout">
+      <div class="h">🛑 Database-backed live-state recovery we chose not to build</div>
+      <p>In-memory state is fast and fragile. Rather than build crash-proof persistence, we
+        <b>documented the boundary</b>: “survives client crashes, not server restarts.” A named, honest
+        gap beats a silent one.</p>
+    </div>
+  </section>
+
+  <!-- TLDR -->
+  <section>
+    <h2><span class="bar"></span>What to teach from this</h2>
+    <ol class="tldr">
+      <li><b>Match the cycle to the work.</b> Features go brainstorm → plan → build → review → verify → finish. Bugs enter through debugging; refactors through TDD. Skipping brainstorming on a bug is correct, not lazy.</li>
+      <li><b>brainstorming pins scope, not just features.</b> Its Non-Goals are YAGNI on paper; its self-review fixes bugs for the price of a sentence.</li>
+      <li><b>Plans are executable.</b> A File Map + checkbox tasks turns building into assembly and lets a fresh subagent run each step cold.</li>
+      <li><b>One task, one commit.</b> Bisectable, revertable history — the corrective commit sits right next to the feature commit.</li>
+      <li><b>Make it testable before you change it.</b> Extract + baseline test first; injectable timing makes the untestable testable.</li>
+      <li><b>Find the layer before the fix.</b> A client OOM is not solved with more server load tests.</li>
+      <li><b>Evidence before “done”</b> — and name what you didn’t verify.</li>
+      <li><b>The best decision is sometimes to not build it.</b> Measure your real scale; YAGNI against it; document what you skip.</li>
+    </ol>
+  </section>
+
+  <footer>
+    Source of truth: <code>docs/superpowers-case-study.md</code> &nbsp;·&nbsp;
+    Engineering deep-dive: <code>docs/lessons-realtime-multiplayer-games.md</code><br>
+    Built with the StellarTrivia space theme — Space Grotesk · JetBrains Mono.
+  </footer>
+
+</div>
+</body>
+</html>
