@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lessons from Hardening a Real-Time Multiplayer Game</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --neon-pink:#f472b6; --neon-blue:#22d3ee; --neon-purple:#4f46e5;
+    --neon-green:#34d399; --space-dark:#020617; --space-light:#1e1b4b;
+    --ink:#e2e8f0; --muted:#94a3b8; --card:rgba(30,27,75,.45);
+    --line:rgba(148,163,184,.18);
+    --sans:'Space Grotesk',system-ui,sans-serif;
+    --mono:'JetBrains Mono',ui-monospace,monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0; font-family:var(--sans); color:var(--ink); line-height:1.65;
+    background:
+      radial-gradient(1100px 700px at 12% -8%, rgba(79,70,229,.32), transparent 60%),
+      radial-gradient(900px 600px at 95% 4%, rgba(34,211,238,.18), transparent 55%),
+      radial-gradient(800px 700px at 60% 110%, rgba(244,114,182,.16), transparent 55%),
+      var(--space-dark);
+    background-attachment:fixed;
+  }
+  body::before{
+    content:""; position:fixed; inset:0; z-index:0; pointer-events:none;
+    background-image:
+      radial-gradient(1.4px 1.4px at 20% 30%, #fff, transparent),
+      radial-gradient(1.2px 1.2px at 70% 60%, #cbd5e1, transparent),
+      radial-gradient(1px 1px at 40% 80%, #fff, transparent),
+      radial-gradient(1.4px 1.4px at 85% 20%, #e0e7ff, transparent),
+      radial-gradient(1px 1px at 55% 12%, #fff, transparent);
+    opacity:.5;
+  }
+  .wrap{position:relative; z-index:1; max-width:880px; margin:0 auto; padding:0 22px 96px}
+
+  header.hero{text-align:center; padding:88px 16px 36px}
+  .kicker{
+    font-family:var(--mono); font-size:.72rem; letter-spacing:.32em; text-transform:uppercase;
+    color:var(--neon-blue); margin-bottom:22px;
+    display:inline-block; padding:7px 16px; border:1px solid rgba(34,211,238,.4);
+    border-radius:999px; background:rgba(34,211,238,.06);
+  }
+  h1{
+    font-size:clamp(2rem,5.5vw,3.4rem); line-height:1.08; margin:.2em 0 .4em; font-weight:700;
+    background:linear-gradient(100deg,#fff 10%,var(--neon-blue) 45%,var(--neon-pink) 82%);
+    -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
+  }
+  .sub{font-size:1.08rem; color:var(--muted); max-width:640px; margin:0 auto}
+
+  .intro{color:var(--muted); max-width:680px; margin:8px auto 0; text-align:center; font-size:1rem}
+
+  section{margin-top:30px}
+  .lesson{
+    background:var(--card); border:1px solid var(--line); border-radius:16px; padding:22px 26px 24px;
+    backdrop-filter:blur(8px); border-left:4px solid var(--accent,var(--neon-pink)); margin-top:18px;
+  }
+  .lesson-head{display:flex; align-items:flex-start; gap:14px; margin-bottom:6px}
+  .lnum{flex:none; width:38px; height:38px; border-radius:11px; display:grid; place-items:center;
+    font-family:var(--mono); font-weight:700; font-size:1.05rem; color:var(--space-dark);
+    background:linear-gradient(135deg,var(--neon-blue),var(--neon-green))}
+  .lesson-head h2{margin:3px 0 0; font-size:1.22rem; color:#fff; font-weight:700; line-height:1.25}
+  .lesson p{font-size:.95rem}
+  .lesson h3{font-size:1rem; color:var(--neon-blue); margin:18px 0 4px}
+  a{color:var(--neon-blue)}
+  code{font-family:var(--mono); font-size:.84em; background:rgba(34,211,238,.1);
+    color:var(--neon-blue); padding:.12em .42em; border-radius:5px; border:1px solid rgba(34,211,238,.18)}
+  strong{color:#fff}
+
+  .tbl{width:100%; border-collapse:collapse; margin:14px 0; font-size:.88rem;
+    background:rgba(2,6,23,.35); border-radius:12px; overflow:hidden; border:1px solid var(--line)}
+  .tbl th,.tbl td{text-align:left; padding:10px 13px; border-bottom:1px solid var(--line); vertical-align:top}
+  .tbl th{background:rgba(79,70,229,.22); font-weight:600; color:#fff; font-size:.74rem; text-transform:uppercase; letter-spacing:.05em}
+  .tbl tr:last-child td{border-bottom:none}
+  .tbl td.num{font-family:var(--mono); color:var(--neon-green); white-space:nowrap}
+
+  .takeaway{margin-top:14px; background:linear-gradient(180deg, rgba(52,211,153,.08), rgba(2,6,23,0));
+    border:1px solid rgba(52,211,153,.3); border-left:4px solid var(--neon-green);
+    border-radius:12px; padding:12px 16px}
+  .takeaway .h{font-family:var(--mono); font-size:.66rem; letter-spacing:.14em; text-transform:uppercase; color:var(--neon-green); margin-bottom:6px}
+  .takeaway ul{margin:0; padding-left:18px} .takeaway li{font-size:.9rem; margin:.3em 0}
+
+  .pull{border-left:3px solid var(--neon-pink); padding:6px 0 6px 16px; margin:14px 0;
+    color:#fff; font-style:italic; font-size:1.02rem}
+
+  ol.tldr{counter-reset:t; list-style:none; padding:0; display:grid; gap:11px; margin-top:12px}
+  ol.tldr li{counter-increment:t; background:var(--card); border:1px solid var(--line); border-radius:12px;
+    padding:14px 16px 14px 56px; position:relative; font-size:.95rem}
+  ol.tldr li::before{content:counter(t); position:absolute; left:14px; top:13px;
+    width:28px; height:28px; border-radius:8px; display:grid; place-items:center;
+    font-family:var(--mono); font-weight:700; color:var(--space-dark);
+    background:linear-gradient(135deg,var(--neon-pink),var(--neon-purple))}
+
+  h2.sec{font-size:1.6rem; margin:48px 0 0; display:flex; align-items:center; gap:12px}
+  h2.sec .bar{width:5px; height:1.4em; border-radius:3px; background:linear-gradient(var(--neon-green),var(--neon-blue))}
+
+  footer{margin-top:64px; padding-top:24px; border-top:1px solid var(--line);
+    text-align:center; color:var(--muted); font-size:.85rem}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hero">
+    <span class="kicker">★ Field Notes · Real-Time Games</span>
+    <h1>Lessons from Hardening a<br>Real-Time Multiplayer Game</h1>
+    <p class="sub">Notes from making a Kahoot-style game (Socket.io + React, in-memory server state)
+      survive real use. Mostly about failure modes, identity, testing, and knowing your actual scale
+      before you optimize.</p>
+  </header>
+
+  <p class="intro">Most of this is not about features. It's about what breaks when real phones, flaky
+    wifi, and a room full of players hit code that worked fine on your laptop.</p>
+
+  <!-- 1 -->
+  <div class="lesson" style="--accent:var(--neon-pink)">
+    <div class="lesson-head"><span class="lnum">1</span><h2>The client is the constraint, not the server</h2></div>
+    <p>A player on iOS Safari got <em>“A problem repeatedly occurred”</em> mid-game and was dropped.
+      That message isn't a JavaScript error — it's the browser killing the tab's render process for
+      using too much memory/GPU, then crash-looping on reload.</p>
+    <p>The cause was the UI, not the network: the player screen ran ~70 continuously animating,
+      GPU-composited layers (large <code>blur()</code> filters with <code>mix-blend-screen</code>, plus
+      several <code>requestAnimationFrame</code> loops) for the whole game. Fine on a laptop, fatal on a
+      loaded phone.</p>
+    <div class="takeaway"><div class="h">Lessons</div><ul>
+      <li>In a live game, every player runs your heaviest UI on the <strong>weakest device in the room</strong>. Design for the worst phone.</li>
+      <li>Animated <code>blur()</code> + <code>mix-blend-screen</code> every frame is the most expensive thing you can ask a mobile GPU to do. Gate heavy effects behind a mobile / <code>prefers-reduced-motion</code> check; ship a static fallback.</li>
+      <li>Distinguish a render-process crash (white tab, OOM) from a JS exception (overlay, stack trace) — totally different causes.</li>
+    </ul></div>
+  </div>
+
+  <!-- 2 -->
+  <div class="lesson" style="--accent:var(--neon-blue)">
+    <div class="lesson-head"><span class="lnum">2</span><h2>Three kinds of testing — they don't substitute for each other</h2></div>
+    <p>Run a load test, see green, call the game “ready” — that's a trap. Each layer answers a
+      different question:</p>
+    <table class="tbl">
+      <tr><th>Layer</th><th>Answers</th><th>Blind to</th></tr>
+      <tr><td><strong>Load test</strong><br>(headless socket clients)</td><td>Can the <em>server</em> hold N connections and deliver answers?</td><td>Anything the browser renders. It never draws a pixel.</td></tr>
+      <tr><td><strong>Unit / integration</strong><br>(in-process)</td><td>Is the <em>game logic</em> correct (scoring, state machine)?</td><td>Real network, real devices.</td></tr>
+      <tr><td><strong>Device test</strong><br>(real phone / throttled)</td><td>Does it actually <em>work and survive</em> on real hardware?</td><td>Nothing else catches the client OOM.</td></tr>
+    </table>
+    <p>The mobile crash above could never be caught by a load test — load tests use headless clients with
+      no DOM. We nearly reached for “run more load tests” to validate a <em>client</em> crash. Wrong
+      layer. Name what each test proves; don't let green in one layer imply safety in another.</p>
+  </div>
+
+  <!-- 3 -->
+  <div class="lesson" style="--accent:var(--neon-green)">
+    <div class="lesson-head"><span class="lnum">3</span><h2>Make real-time code testable, or you'll never change it safely</h2></div>
+    <p>The game logic started sealed inside one big <code>startServer()</code> that also booted the web
+      server and listened on a port. You couldn't reach scoring or the socket handlers without starting
+      the whole thing — so the part most likely to break had no tests.</p>
+    <p>The fix was a behaviour-preserving extraction: move session state and all socket handlers into an
+      exported <code>registerGameHandlers(io, options)</code>. Now a test can spin up a throwaway
+      Socket.io server on an ephemeral port, connect real clients, drive a real game
+      (host → join → answer → results), and assert on the broadcast payloads.</p>
+    <div class="takeaway"><div class="h">Lessons</div><ul>
+      <li>Test real-time logic <strong>through the protocol</strong> (emit events, assert on broadcasts), not by poking internal state — keeps tests honest about what clients see.</li>
+      <li>Mock only the truly external dependency (the database). Run the real socket server in-process.</li>
+      <li>Make timeouts injectable (<code>registerGameHandlers(io, { hostGraceMs })</code>) so a test uses 150ms, not 30s. <em>Untestable timing is untested timing.</em></li>
+      <li>This extraction was the highest-leverage move — every later fix became verifiable the moment the logic was importable. Do it before, not after.</li>
+    </ul></div>
+  </div>
+
+  <!-- 4 -->
+  <div class="lesson" style="--accent:var(--neon-purple)">
+    <div class="lesson-head"><span class="lnum">4</span><h2>The “answer storm”: quadratic broadcasts — and why we did <em>not</em> fix it</h2></div>
+    <p>The server broadcast full game state to every socket on <em>every</em> submitted answer. With N
+      players answering at once that's ~N broadcasts per question, each an O(N) payload to N clients:
+      O(N²) messages, O(N³) bytes per question. We measured instead of guessing:</p>
+    <table class="tbl">
+      <tr><th>Players</th><th>Broadcasts / question</th><th>Payload pushed</th><th>Event-loop stall</th></tr>
+      <tr><td class="num">50</td><td class="num">2,652</td><td class="num">22.8 MB</td><td class="num">90 ms</td></tr>
+      <tr><td class="num">100</td><td class="num">10,302</td><td class="num">173.7 MB</td><td class="num">480 ms</td></tr>
+    </table>
+    <p>Doubling players (50→100) gave <strong>3.9× the broadcasts</strong> and <strong>7.6× the
+      bytes</strong>. The scary metric isn't megabytes — it's the <strong>event-loop stall</strong>: at
+      100 players the server froze ~half a second per question, unable to accept joins or answer health
+      checks.</p>
+    <p class="pull">The decision: we did <em>not</em> fix it. The real target was ~40 players, where the
+      stall is ~50ms (imperceptible), confirmed by a 40-player production run. Fixing it would have been
+      engineering for a scale that didn't exist.</p>
+    <div class="takeaway"><div class="h">Lessons</div><ul>
+      <li>Measure before you optimize — we almost shipped a fix for a non-problem.</li>
+      <li>Event-loop stall, not bandwidth, predicts a bad live game.</li>
+      <li>“Broadcast full state on every mutation” is a fine default that quietly goes quadratic. Know where <em>your</em> cliff is.</li>
+      <li>Knowing your real scale is a feature — it told us to skip a whole project.</li>
+    </ul></div>
+  </div>
+
+  <!-- 5 -->
+  <div class="lesson" style="--accent:var(--neon-pink)">
+    <div class="lesson-head"><span class="lnum">5</span><h2>Identity and reconnection: the genuinely hard part</h2></div>
+    <p>Phones drop, wifi blinks, tabs crash — constantly, in a live game. The default setup made it
+      catastrophic because players and the host were keyed by the ephemeral <code>socket.id</code>. A
+      reconnect is a new socket = a new identity, so a dropped player was deleted, and the
+      <strong>host dropping ended the game for everyone</strong>.</p>
+    <h3>Stable identity beats socket id</h3>
+    <p>The fix: a <strong>client-minted token</strong> (a UUID in <code>localStorage</code>) sent on
+      join/host and re-sent on reconnect. The server keys players/host by that token, not the socket. A
+      reload or blip reattaches to the same identity with the same score.</p>
+    <h3>Disconnect ≠ “gone” — use a grace window</h3>
+    <p>For the host, a 30s grace timer: a disconnect starts a countdown instead of ending the room;
+      reconnect cancels it. Same idea for players (keep them listed as “reconnecting,” don't delete).</p>
+    <h3>The edge cases are where the real work is</h3>
+    <div class="takeaway"><div class="h">80% of a reconnect feature</div><ul>
+      <li><strong>Recycled identifiers.</strong> Short PINs get reused. A stale <code>localStorage</code> entry must not walk a returning user into a <em>different</em> game sharing the PIN — match on the unguessable token, clear only the exact session you tried to resume.</li>
+      <li><strong>Reload vs. blip.</strong> A transient reconnect keeps in-memory state; a full reload wipes it and re-runs mount logic, racing with reconnection. An <code>isResuming</code> flag stops a reloading host from auto-hosting a duplicate.</li>
+      <li><strong><code>localStorage</code> can throw.</strong> iOS private mode throws on write — guard every access and degrade to “no resume” instead of crashing the join.</li>
+      <li><strong>Re-emit on every connect.</strong> Handle reload and transient reconnect with one path: on every <code>connect</code>, if a stored session exists, attempt resume.</li>
+    </ul></div>
+    <h3>Trust model</h3>
+    <p>The token is client-generated and trusted: possession <em>is</em> identity. A 122-bit UUID is
+      unguessable, so it's fine for a party game — name that assumption so nobody mistakes it for auth.</p>
+  </div>
+
+  <!-- 6 -->
+  <div class="lesson" style="--accent:var(--neon-blue)">
+    <div class="lesson-head"><span class="lnum">6</span><h2>In-memory state is fast and fragile — decide what you won't cover</h2></div>
+    <p>All game state lived in plain server-side Maps. Great for latency, but:</p>
+    <ul>
+      <li>A <strong>server restart wipes every live game.</strong> Our reconnection work survives a client crash but not a server restart — we accepted that and wrote it down rather than building DB-backed live-state recovery (a much larger project for a party game).</li>
+      <li>On a free hosting tier the instance <strong>sleeps when idle</strong>, so the first players can hit a 30–60s cold boot. A self-ping doesn't help (the process is stopped); only an <em>external</em> warmer does.</li>
+    </ul>
+    <div class="takeaway"><div class="h">Lesson</div><ul>
+      <li>For in-memory real-time servers, explicitly decide and <strong>document what you do not recover from</strong>. “Survives client crashes, not server restarts” is a fine, honest boundary. Silent gaps are the dangerous ones.</li>
+    </ul></div>
+  </div>
+
+  <!-- 7 -->
+  <div class="lesson" style="--accent:var(--neon-green)">
+    <div class="lesson-head"><span class="lnum">7</span><h2>Production is a pile of small decisions, not features</h2></div>
+    <p>The interesting work was rarely “build X.” It was choosing well: how long a host can be gone
+      before the room gives up (30s); what other players see while someone's out (“reconnecting,” not
+      vanished); whether reconnection is silent or manual (silent); how much we cover for a server
+      restart (nothing, documented).</p>
+    <div class="takeaway"><div class="h">Principles that held up</div><ul>
+      <li><strong>Do the complete thing when it's cheap, flag the thing that isn't.</strong> A clean reconnect across blips and reloads was worth finishing; DB-backed recovery was correctly flagged out of scope.</li>
+      <li><strong>YAGNI against your real scale.</strong> The answer-storm fix was the textbook “right” optimization and the wrong thing to build for 40 players.</li>
+      <li><strong>Be honest about what's verified.</strong> Server logic had tests; the client reconnection path type-checked and built but wasn't auto-tested — so it was called out as needing a real-device check, not quietly marked “done.”</li>
+    </ul></div>
+  </div>
+
+  <!-- 8 -->
+  <div class="lesson" style="--accent:var(--neon-purple)">
+    <div class="lesson-head"><span class="lnum">8</span><h2>Process notes that paid off</h2></div>
+    <ul>
+      <li><strong>Tag a known-good commit before risky work.</strong> A named anchor makes “undo all of this” one line instead of archaeology.</li>
+      <li><strong>Refactor behind tests, then change behavior.</strong> Extract → baseline test → modify. The baseline catches a refactor breaking scoring instantly.</li>
+      <li><strong>Test-first shines on state machines.</strong> Reconnection and scoring are exactly the silent-corruption-prone logic where a failing-then-passing test earns its keep.</li>
+      <li><strong>Small, independent PRs</strong> keep each change revertable on its own.</li>
+    </ul>
+  </div>
+
+  <!-- TLDR -->
+  <h2 class="sec"><span class="bar"></span>TL;DR</h2>
+  <ol class="tldr">
+    <li>The client (mobile GPU/memory) is your real constraint; load tests are blind to it.</li>
+    <li>Extract your real-time logic so it's importable and testable through the protocol.</li>
+    <li>Measure scaling before optimizing; event-loop stall predicts a bad live game; know your cliff and ignore it if you're below it.</li>
+    <li>Key players/host by a stable token, not the socket id; treat disconnect as “maybe coming back” with a grace window; the edge cases are the actual work.</li>
+    <li>In-memory is fast and fragile; decide and document what you do not recover from.</li>
+    <li>Most of production is small, well-reasoned decisions about failure modes.</li>
+  </ol>
+
+  <footer>
+    Source of truth: <code>docs/lessons-realtime-multiplayer-games.md</code> &nbsp;·&nbsp;
+    Companion: <code>docs/superpowers-case-study.html</code><br>
+    Built with the StellarTrivia space theme — Space Grotesk · JetBrains Mono.
+  </footer>
+
+</div>
+</body>
+</html>
